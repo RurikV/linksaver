@@ -1,0 +1,22 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.development
+    restart: always
+    ports:
+      - "7777:7777"
+    volumes:
+      - "./src:/usr/app/src"
+    working_dir: /usr/app/src
+    links:
+      - mongo
+  mongo:
+    image: mongo:8.0.1
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=pass
+      - MONGO_INITDB_DATABASE=linksaver
+    ports:
+      - "27017:27017"

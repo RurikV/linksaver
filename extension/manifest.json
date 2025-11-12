@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "LinkSaver",
+  "version": "1.0.0",
+  "description": "Save and manage all your important links",
+  "icons": {
+    "128": "public/icon.png"
+  },
+  "action": {
+    "default_title": "Save link"
+  },
+  "host_permissions": ["http://localhost:7777/*"],
+  "web_accessible_resources": [
+    {
+      "resources": ["/*"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["activeTab", "contextMenus", "tabs", "storage"]
+}
