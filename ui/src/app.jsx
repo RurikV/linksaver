@@ -9,6 +9,7 @@ import RootRoute from "./routes/root";
 import UnverifiedRoute from "./routes/unverified";
 import VerifyRoute from "./routes/verify";
 import Protected from "./routes/protected";
+import CmsRoute from "./routes/cms";
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -30,6 +31,7 @@ const App = () => {
       <GlobalStyle />
       <ToastContainer autoClose={1500} />
       <Routes>
+        <Route path="/cms/:slug" element={<CmsRoute />} />
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/register" element={<RegisterRoute />} />
         <Route path="/unverified" element={<UnverifiedRoute />} />

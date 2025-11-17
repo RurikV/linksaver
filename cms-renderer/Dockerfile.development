@@ -1,0 +1,15 @@
+FROM node:20.12.0-alpine
+
+WORKDIR /usr/app
+
+COPY package.json .
+RUN npm install --only=production && npm install --only=dev
+
+COPY . .
+
+EXPOSE 7782
+
+# Healthcheck to ensure the service is responding
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD wget -qO- http://localhost:7782/health > /dev/null 2>&1 || exit 1
+
+CMD ["npm", "run", "start:dev"]

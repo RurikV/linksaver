@@ -1,0 +1,16 @@
+{
+  "name": "linksaver-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo scripts for LinkSaver (API, UI, Extension, CMS services)",
+  "license": "ISC",
+  "scripts": {
+    "cms:up": "docker compose -f docker-compose.cms.yml up",
+    "cms:build": "docker compose -f docker-compose.cms.yml build",
+    "cms:down": "docker compose -f docker-compose.cms.yml down",
+    "cms:seed": "npm --prefix cms-composer run seed:dev && npm --prefix cms-renderer run seed:dev",
+    "cms:reset": "RESET=1 npm --prefix cms-composer run seed:reset && RESET=1 npm --prefix cms-renderer run seed:reset",
+    "cms:test": "npm --prefix cms-sdk run test && npm --prefix cms-composer run test && npm --prefix cms-renderer run test && npm --prefix ui run test",
+    "cms:test:coverage": "npm --prefix cms-sdk run test:coverage && npm --prefix cms-composer run test:coverage && npm --prefix cms-renderer run test:coverage && npm --prefix ui run test:coverage"
+  }
+}

@@ -206,6 +206,85 @@ Extension:
   - Keep `npm run dev` running in `extension`. Reload the unpacked extension in chrome://extensions if necessary.
 
 
+## CMS (Plugin‑based dynamic pages)
+
+This repo includes an experimental, extensible CMS composed of two microservices that render pages from a JSON DSL and a plugin registry.
+
+- cms-sdk — shared library with IoC container, DSL validators (Ajv), plugin registry, renderers, and middleware utilities.
+- cms-composer — service that loads a page JSON (from Mongo), runs middleware (locale, feature flags, A/B), validates, and returns composed JSON.
+- cms-renderer — service that validates a node tree and renders HTML (or echoes JSON), using a plugin allowlist loaded from Mongo.
+
+Ports (defaults):
+- cms-composer: 7781
+- cms-renderer: 7782
+
+JSON DSL (simplified):
+```
+Page: {
+  version: string,             // e.g., "1.0.0"
+  meta: { slug?: string, title?: string, locale?: string },
+  root: Node
+}
+
+Node: {
+  type: string,                // plugin id
+  params: object,              // plugin params (validated by per‑plugin schema)
+  children?: Node[]
+}
+```
+
+Built‑in plugins (initial set): `Container`, `TextBlock`, `Image`, `List`.
+
+Endpoints:
+- Composer: `GET /v1/pages/:slug`
+  - Headers: follows the same security policy as the API — either `Origin` matches `UI_URL` or include header `X-Link-Saver: 1`.
+  - Optional headers/params: `Accept-Language`, `?locale=`; feature flags via `X-Flags: flagA,flagB`.
+- Renderer: `POST /v1/render`
+  - Body: `{ page }` (full page) or `{ tree }` (node tree only)
+  - HTML response when `Accept: text/html` or `?format=html`; otherwise JSON `{ tree, meta?, version? }`.
+
+Environment variables:
+- Services
+  - `UI_URL` — e.g., `http://localhost:5173` (used in CORS/header checks)
+  - `CMS_MONGODB_URI` — e.g., `mongodb://root:pass@mongo:27017/linksaver?authSource=admin`
+  - `CMS_DB_NAME` — default `linksaver`
+- UI (Vite)
+  - `VITE_CMS_COMPOSER_URL` — default `http://localhost:7781`
+  - `VITE_CMS_RENDERER_URL` — default `http://localhost:7782`
+
+Run the CMS stack (Docker Compose):
+```
+npm run cms:build          # optional: build images
+npm run cms:up             # starts cms-composer, cms-renderer, mongo, mongo-express
+npm run cms:seed           # seed demo page and activate built-in plugins
+# stop
+npm run cms:down
+```
+
+Quick demo:
+- Open the UI route at `http://localhost:5173/cms/home`.
+  - The UI fetches `GET http://localhost:7781/v1/pages/home` and renders using client-side plugin components.
+  - You can pass `?locale=fr` to influence locale resolved by composer (if used by your UI).
+
+Curl demo:
+```
+# Get composed page JSON from composer
+curl -H "Origin: http://localhost:5173" \
+  http://localhost:7781/v1/pages/home | jq
+
+# Render the tree to HTML via renderer
+curl -H "Origin: http://localhost:5173" -H "Accept: text/html" \
+  -H 'Content-Type: application/json' \
+  -d '{"tree":{"type":"TextBlock","params":{"text":"Hello"}}}' \
+  http://localhost:7782/v1/render
+```
+
+Notes
+- Security: Both services mirror the API’s CORS/header rule — non‑UI origins must include `X-Link-Saver`.
+- Plugins allowlist: `cms-renderer` loads active plugin IDs from the `plugins` collection in Mongo.
+- Middleware: `cms-composer` applies locale resolution, feature flags (prunes nodes via `params.featureFlag`), and A/B bucketing.
+
+
 ## License
 
 This project is licensed under the terms of the LICENSE file in the repository root.
