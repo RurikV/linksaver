@@ -2,8 +2,8 @@ version: "3"
 services:
   cms-composer:
     build:
-      context: ./cms-composer
-      dockerfile: Dockerfile.development
+      context: .
+      dockerfile: ./cms-composer/Dockerfile.development
     restart: always
     ports:
       - "7781:7781"
@@ -15,12 +15,12 @@ services:
       - mongo
     volumes:
       - ./cms-composer/src:/usr/app/src
-    working_dir: /usr/app/src
+      - ./cms-sdk:/usr/app/cms-sdk
 
   cms-renderer:
     build:
-      context: ./cms-renderer
-      dockerfile: Dockerfile.development
+      context: .
+      dockerfile: ./cms-renderer/Dockerfile.development
     restart: always
     ports:
       - "7782:7782"
@@ -32,8 +32,19 @@ services:
       - mongo
     volumes:
       - ./cms-renderer/src:/usr/app/src
-    working_dir: /usr/app/src
+      - ./cms-sdk:/usr/app/cms-sdk
 
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.development
+    restart: always
+    ports:
+      - "7777:7777"
+    volumes:
+      - "./api/src:/usr/app/src"
+    links:
+      - mongo
   mongo:
     image: mongo
     environment:
@@ -41,15 +52,15 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=pass
       - MONGO_INITDB_DATABASE=linksaver
     ports:
-      - "27018:27017"
-
+      - "27017:27017"
   mongo-express:
     image: mongo-express
     restart: always
     ports:
-      - "8089:8081"
+      - "8088:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: pass
       ME_CONFIG_MONGODB_URL: mongodb://root:pass@mongo:27017/
       ME_CONFIG_BASICAUTH: false
+
