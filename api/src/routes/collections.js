@@ -2,6 +2,9 @@ const express = require("express");
 const mongoose = require("mongoose");
 const axios = require("axios");
 
+const { validation } = require("../handlers/validation");
+const response = require("../utils/response");
+
 const router = express.Router();
 
 // Collection Schema
@@ -24,7 +27,7 @@ const collectionSchema = new mongoose.Schema({
 const Collection = mongoose.model("Collection", collectionSchema);
 
 // Get user's collections
-router.get("/", async (req, res) => {
+router.get("/", response(validation), response(async (req, res) => {
   try {
     const { userId, query } = req;
     const { includePublic = false, limit = 20, page = 1 } = query;
@@ -62,10 +65,10 @@ router.get("/", async (req, res) => {
     console.error("Error getting collections:", error);
     res.status(500).json({ error: "Failed to get collections" });
   }
-});
+}));
 
 // Create new collection
-router.post("/", async (req, res) => {
+router.post("/", response(validation), response(async (req, res) => {
   try {
     const { userId, body } = req;
     const { title, description, linkIds, cmsPages, isPublic, tagIds } = body;
@@ -99,7 +102,7 @@ router.post("/", async (req, res) => {
     console.error("Error creating collection:", error);
     res.status(500).json({ error: "Failed to create collection" });
   }
-});
+}));
 
 // Get collection by ID
 router.get("/:collectionId", async (req, res) => {

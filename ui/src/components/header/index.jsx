@@ -30,11 +30,16 @@ const Header = () => {
           <Button
             onClick={() => navigate("/content-hub")}
             style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white'
+              background: 'transparent',
+              color: '#333',
+              border: '1px solid #ddd',
+              padding: '8px 16px',
+              fontSize: '0.9em',
+              fontWeight: '500',
+              borderRadius: '4px'
             }}
           >
-            🚀 Content Hub
+            Content Hub
           </Button>
           <Button onClick={handleLogout}>Logout</Button>
         </div>

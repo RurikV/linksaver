@@ -22,11 +22,12 @@ exports.getLinks = async (req, res) => {
     .sort({ createdAt: sortBy === "2" ? 1 : -1 })
     .populate("tags");
   const parsedLinks = links.map((l) => ({
+    _id: l._id,
     linkId: l.linkId,
     title: l.title,
     url: l.url,
     date: l.createdAt,
-    tags: l.tags.map((t) => ({ tagId: t.tagId, title: t.title })),
+    tags: l.tags.map((t) => ({ tagId: t.tagId, title: t.title, _id: t._id })),
   }));
 
   res.status(200).send({

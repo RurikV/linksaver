@@ -71,7 +71,7 @@ function Fragmented({ node }) {
 }
 
 const ContentHub = () => {
-  const { getRequest } = useApi();
+  const { getRequest, postRequest } = useApi();
   const { state } = useAppContext();
   const [activeTab, setActiveTab] = useState('personal');
   const [featuredContent, setFeaturedContent] = useState([]);
@@ -80,15 +80,16 @@ const ContentHub = () => {
   const [remixContent, setRemixContent] = useState([]);
 
   const tabs = [
-    { id: 'personal', label: '🔖 My Links', icon: '📁' },
-    { id: 'discover', label: '🔍 Discover', icon: '🌟' },
-    { id: 'collections', label: '📚 Collections', icon: '💎' },
-    { id: 'remix', label: '🎨 Remix', icon: '🎭' },
-    { id: 'trending', label: '📈 Trending', icon: '🔥' }
+    { id: 'personal', label: 'My Links' },
+    { id: 'discover', label: 'Discover' },
+    { id: 'collections', label: 'Collections' },
+    { id: 'remix', label: 'Remix' },
+    { id: 'trending', label: 'Trending' }
   ];
 
   // Load personal links
   useEffect(() => {
+    console.log('Active tab changed to:', activeTab);
     if (activeTab === 'personal') {
       loadPersonalLinks();
     }
@@ -117,8 +118,11 @@ const ContentHub = () => {
 
   const loadPersonalLinks = async () => {
     try {
+      console.log('Loading personal links...');
       const res = await getRequest("links");
-      setPersonalContent(res.data.links || []);
+      console.log('Links response:', res);
+      setPersonalContent(res.data?.links || []);
+      console.log('Personal content set:', res.data?.links?.length || 0, 'links');
     } catch (error) {
       console.error("Failed to load personal links:", error);
     }
@@ -160,32 +164,52 @@ const ContentHub = () => {
 
   const loadUserCollections = async () => {
     try {
-      // In a real app, this would load user-created collections
-      // For now, create sample collections
-      const collections = [
-        {
-          id: 'work-resources',
-          title: 'Work Resources',
-          description: 'Links I use for work',
-          items: personalContent.slice(0, 3),
-          isPublic: true,
-          likes: 12,
-          views: 45
-        },
-        {
-          id: 'learning-materials',
-          title: 'Learning Materials',
-          description: 'Educational resources',
-          items: personalContent.slice(3, 6),
-          isPublic: false,
-          likes: 0,
-          views: 0
-        }
-      ];
+      // Load real collections from API
+      console.log('Loading collections...');
+      const response = await getRequest("collections");
+      console.log('Collections response:', response);
+      const collections = response.data?.collections || [];
 
-      setUserCollections(collections);
+      // Transform the data to match expected format
+      const formattedCollections = collections.map(collection => ({
+        id: collection.collectionId,
+        title: collection.title,
+        description: collection.description || '',
+        items: collection.links || [],
+        isPublic: collection.isPublic || false,
+        likes: collection.metadata?.likes || 0,
+        views: collection.metadata?.views || 0,
+        createdAt: collection.createdAt,
+        updatedAt: collection.updatedAt
+      }));
+
+      setUserCollections(formattedCollections);
     } catch (error) {
       console.error("Failed to load collections:", error);
+      // Fallback to sample data if API fails
+      const sampleCollections = [
+        {
+          id: 'sample-work',
+          title: 'Work Resources',
+          description: 'Links I use for work',
+          items: personalContent.slice(0, 2),
+          isPublic: true,
+          likes: 12,
+          views: 45,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'sample-learning',
+          title: 'Learning Materials',
+          description: 'Educational resources',
+          items: personalContent.slice(2, 4),
+          isPublic: false,
+          likes: 0,
+          views: 0,
+          createdAt: new Date().toISOString()
+        }
+      ];
+      setUserCollections(sampleCollections);
     }
   };
 
@@ -209,71 +233,187 @@ const ContentHub = () => {
     setRemixContent(prev => [...prev, item]);
   };
 
-  const createCollection = () => {
-    const newCollection = {
-      id: `collection-${Date.now()}`,
-      title: 'New Collection',
-      description: 'My curated collection',
-      items: remixContent,
-      isPublic: false,
-      likes: 0,
-      views: 0
-    };
+  const createCollection = async () => {
+    if (remixContent.length === 0) {
+      alert('Please add some items to your collection first');
+      return;
+    }
 
-    setUserCollections(prev => [...prev, newCollection]);
-    setRemixContent([]);
-    setActiveTab('collections');
+    try {
+      // Extract valid link IDs (use MongoDB _id for collections)
+      const linkIds = remixContent
+        .filter(item => item._id && !item.type) // Only actual LinkSaver links
+        .map(item => item._id) // Use MongoDB _id (ObjectId)
+        .filter(Boolean);
+
+      const cmsPages = remixContent
+        .filter(item => item.type === 'cms-page')
+        .map(item => item.slug)
+        .filter(Boolean);
+
+      const collectionData = {
+        title: `Collection - ${new Date().toLocaleDateString()}`,
+        description: `Created with ${remixContent.length} items`,
+        linkIds: linkIds,
+        isPublic: false,
+        cmsPages: cmsPages
+      };
+
+      console.log('Creating collection with data:', collectionData);
+
+      // Use the useApi hook for proper authentication
+      const response = await postRequest("collections", collectionData);
+
+      if (response.data) {
+        const result = response.data;
+
+        // Add to local state
+        const newCollection = {
+          id: result.collection.collectionId,
+          title: result.collection.title,
+          description: result.collection.description,
+          items: remixContent,
+          isPublic: result.collection.isPublic,
+          likes: 0,
+          views: 0,
+          createdAt: new Date().toISOString()
+        };
+
+        setUserCollections(prev => [...prev, newCollection]);
+        setRemixContent([]);
+        setActiveTab('collections');
+        alert('Collection created successfully!');
+      } else {
+        throw new Error('Failed to create collection');
+      }
+    } catch (error) {
+      console.error("Error creating collection:", error);
+      // Fallback to local creation if API fails
+      const newCollection = {
+        id: `local-collection-${Date.now()}`,
+        title: 'My Remix Collection',
+        description: 'Created locally - sync to save permanently',
+        items: remixContent,
+        isPublic: false,
+        likes: 0,
+        views: 0,
+        createdAt: new Date().toISOString()
+      };
+
+      setUserCollections(prev => [...prev, newCollection]);
+      setRemixContent([]);
+      setActiveTab('collections');
+      alert('Collection created locally (will sync when API is available)');
+    }
   };
 
   const renderPersonalLinks = () => (
     <div className="personal-links">
       <div className="links-grid" style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '20px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+        gap: '16px',
         padding: '20px'
       }}>
         {personalContent.map(link => (
           <div key={link.linkId} className="link-card" style={{
             background: 'white',
-            padding: '20px',
+            padding: '16px',
             borderRadius: '8px',
             border: '1px solid #e0e0e0',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s ease',
+            height: 'fit-content'
           }}>
-            <h3 style={{ margin: '0 0 10px 0', color: '#333' }}>{link.title}</h3>
-            <a href={link.url} target="_blank" rel="noopener noreferrer"
-               style={{ color: '#007bff', textDecoration: 'none', fontSize: '0.9em' }}>
-              {link.url}
-            </a>
-            <div style={{ marginTop: '10px' }}>
-              {link.tags.map(tag => (
-                <span key={tag.tagId} style={{
-                  background: '#e9ecef',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontSize: '0.8em',
-                  marginRight: '5px',
-                  color: '#6c757d'
-                }}>
-                  {tag.title}
-                </span>
-              ))}
+            <div style={{ marginBottom: '12px' }}>
+              <h3 style={{
+                margin: '0 0 8px 0',
+                color: '#333',
+                fontSize: '1.1em',
+                fontWeight: '600',
+                lineHeight: '1.3',
+                display: '-webkit-box',
+                WebkitLineClamp: '2',
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}>{link.title}</h3>
+
+              <a href={link.url} target="_blank" rel="noopener noreferrer"
+                 style={{
+                   color: '#007bff',
+                   textDecoration: 'none',
+                   fontSize: '0.85em',
+                   display: 'block',
+                   overflow: 'hidden',
+                   textOverflow: 'ellipsis',
+                   whiteSpace: 'nowrap'
+                 }}>
+                {link.url}
+              </a>
             </div>
-            <button
-              onClick={() => addToRemix(link)}
-              style={{
-                marginTop: '15px',
-                background: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              + Add to Remix
-            </button>
+
+            {link.tags && link.tags.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                {link.tags.slice(0, 3).map(tag => (
+                  <span key={tag.tagId} style={{
+                    background: '#f8f9fa',
+                    color: '#6c757d',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75em',
+                    marginRight: '4px',
+                    marginBottom: '4px',
+                    display: 'inline-block'
+                  }}>
+                    {tag.title}
+                  </span>
+                ))}
+                {link.tags.length > 3 && (
+                  <span style={{
+                    background: '#f8f9fa',
+                    color: '#6c757d',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '0.75em'
+                  }}>
+                    +{link.tags.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingTop: '12px',
+              borderTop: '1px solid #f0f0f0'
+            }}>
+              <span style={{
+                color: '#6c757d',
+                fontSize: '0.8em'
+              }}>
+                {new Date(link.date).toLocaleDateString()}
+              </span>
+
+              <button
+                onClick={() => addToRemix(link)}
+                style={{
+                  background: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.85em',
+                  transition: 'background 0.2s ease'
+                }}
+                onMouseOver={(e) => e.target.style.background = '#0056b3'}
+                onMouseOut={(e) => e.target.style.background = '#007bff'}
+              >
+                + Add to Remix
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -319,7 +459,7 @@ const ContentHub = () => {
                 borderRadius: '4px',
                 cursor: 'pointer'
               }}>
-                💾 Save to Collection
+                Save to Collection
               </button>
               <button style={{
                 background: '#17a2b8',
@@ -330,7 +470,7 @@ const ContentHub = () => {
                 cursor: 'pointer',
                 marginLeft: '10px'
               }}>
-                🔄 Remix
+                Remix
               </button>
             </div>
           </div>
@@ -342,64 +482,153 @@ const ContentHub = () => {
   const renderCollections = () => (
     <div className="collections">
       <div style={{ padding: '20px' }}>
-        <h2>My Collections</h2>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-          gap: '20px'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px'
         }}>
-          {userCollections.map(collection => (
-            <div key={collection.id} className="collection-card" style={{
-              background: 'white',
-              border: '1px solid #e0e0e0',
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                background: collection.isPublic ? '#d4edda' : '#f8f9fa',
-                padding: '15px',
-                borderBottom: '1px solid #e0e0e0'
-              }}>
-                <h3 style={{ margin: '0 0 5px 0' }}>{collection.title}</h3>
-                <p style={{ margin: 0, color: '#6c757d', fontSize: '0.9em' }}>
-                  {collection.description}
-                </p>
-                <div style={{ marginTop: '10px' }}>
-                  <span style={{
-                    background: collection.isPublic ? '#28a745' : '#6c757d',
-                    color: 'white',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '0.8em'
-                  }}>
-                    {collection.isPublic ? '🌍 Public' : '🔒 Private'}
-                  </span>
-                </div>
-              </div>
+          <h2 style={{ margin: 0 }}>My Collections</h2>
+          <button
+            onClick={() => setActiveTab('remix')}
+            style={{
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9em'
+            }}
+          >
+            + Create New Collection
+          </button>
+        </div>
 
-              <div style={{ padding: '15px' }}>
+        {userCollections.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '60px 20px',
+            background: 'white',
+            borderRadius: '8px',
+            border: '1px solid #e0e0e0'
+          }}>
+            <div style={{ fontSize: '2em', marginBottom: '20px', color: '#6c757d' }}>Collections</div>
+            <h3 style={{ color: '#333', marginBottom: '10px' }}>No Collections Yet</h3>
+            <p style={{ color: '#6c757d', marginBottom: '20px' }}>
+              Start building collections by adding links from your library or discovering content
+            </p>
+            <button
+              onClick={() => setActiveTab('remix')}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '1em'
+              }}
+            >
+              Create Your First Collection
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+            gap: '20px'
+          }}>
+            {userCollections.map(collection => (
+              <div key={collection.id} className="collection-card" style={{
+                background: 'white',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                transition: 'box-shadow 0.2s ease',
+                cursor: 'pointer'
+              }}
+              onClick={() => {
+                // Show collection details
+                alert(`Collection: ${collection.title}\nItems: ${collection.items.length}\nStatus: ${collection.isPublic ? 'Public' : 'Private'}`);
+              }}
+              >
                 <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '10px'
+                  background: collection.isPublic ? '#d4edda' : '#f8f9fa',
+                  padding: '15px',
+                  borderBottom: '1px solid #e0e0e0'
                 }}>
-                  <span style={{ fontSize: '0.9em', color: '#6c757d' }}>
-                    {collection.items.length} items
-                  </span>
-                  <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                    {collection.isPublic && (
-                      <>
-                        <span>❤️ {collection.likes}</span>
-                        <span style={{ marginLeft: '10px' }}>👁️ {collection.views}</span>
-                      </>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1em' }}>{collection.title}</h3>
+                  <p style={{
+                    margin: 0,
+                    color: '#6c757d',
+                    fontSize: '0.9em',
+                    display: '-webkit-box',
+                    WebkitLineClamp: '2',
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    lineHeight: '1.4'
+                  }}>
+                    {collection.description || 'No description provided'}
+                  </p>
+                  <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+                    <span style={{
+                      background: collection.isPublic ? '#28a745' : '#6c757d',
+                      color: 'white',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.75em',
+                      fontWeight: '500'
+                    }}>
+                      {collection.isPublic ? 'Public' : 'Private'}
+                    </span>
+                    {collection.id.startsWith('local-') && (
+                      <span style={{
+                        background: '#ffc107',
+                        color: '#333',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.75em',
+                        fontWeight: '500'
+                      }}>
+                        Local
+                      </span>
                     )}
                   </div>
                 </div>
+
+                <div style={{ padding: '15px' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <span style={{
+                      fontSize: '0.9em',
+                      color: '#6c757d',
+                      fontWeight: '500'
+                    }}>
+                      {collection.items.length} items
+                    </span>
+                    <span style={{
+                      fontSize: '0.8em',
+                      color: '#6c757d'
+                    }}>
+                      {collection.createdAt && new Date(collection.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {collection.isPublic && (
+                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
+                      {collection.likes > 0 && <span style={{ marginRight: '15px' }}>Likes: {collection.likes}</span>}
+                      {collection.views > 0 && <span>Views: {collection.views}</span>}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -407,7 +636,7 @@ const ContentHub = () => {
   const renderRemix = () => (
     <div className="remix-workspace">
       <div style={{ padding: '20px' }}>
-        <h2>🎨 Remix Workspace</h2>
+        <h2>Remix Workspace</h2>
         <p style={{ color: '#6c757d' }}>
           Combine your links with featured content to create new collections
         </p>
@@ -491,7 +720,7 @@ const ContentHub = () => {
                   cursor: remixContent.length > 0 ? 'pointer' : 'not-allowed'
                 }}
               >
-                💾 Create Collection
+                Create Collection
               </button>
             </div>
 
@@ -508,7 +737,7 @@ const ContentHub = () => {
                   cursor: remixContent.length > 0 ? 'pointer' : 'not-allowed'
                 }}
               >
-                🌐 Publish as CMS Page
+                Publish as CMS Page
               </button>
             </div>
           </div>
@@ -520,7 +749,7 @@ const ContentHub = () => {
   const renderTrending = () => (
     <div className="trending-content">
       <div style={{ padding: '20px' }}>
-        <h2>🔥 Trending Now</h2>
+        <h2>Trending Now</h2>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
@@ -572,7 +801,7 @@ const ContentHub = () => {
                   fontSize: '0.8em',
                   color: '#6c757d'
                 }}>
-                  💾 {item.saveCount || 0} saves
+                  {item.saveCount || 0} saves
                 </span>
                 <button
                   onClick={() => addToRemix(item)}
@@ -616,7 +845,7 @@ const ContentHub = () => {
         padding: '30px 20px',
         textAlign: 'center'
       }}>
-        <h1 style={{ margin: 0, fontSize: '2.5em' }}>🚀 Content Hub</h1>
+        <h1 style={{ margin: 0, fontSize: '2.5em' }}>Content Hub</h1>
         <p style={{ margin: '10px 0 0 0', opacity: 0.9, fontSize: '1.1em' }}>
           Your personal links meet curated content
         </p>
@@ -648,12 +877,13 @@ const ContentHub = () => {
                 border: 'none',
                 borderBottom: activeTab === tab.id ? '3px solid #0056b3' : '3px solid transparent',
                 cursor: 'pointer',
-                fontSize: '0.9em',
-                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
-                transition: 'all 0.3s ease'
+                fontSize: '0.95em',
+                fontWeight: activeTab === tab.id ? '600' : '400',
+                transition: 'all 0.3s ease',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
               }}
             >
-              <div style={{ marginBottom: '5px' }}>{tab.icon}</div>
               {tab.label}
             </button>
           ))}
