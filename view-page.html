@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Page Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .rendered-content {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            min-height: 200px;
+            background: white;
+        }
+        .api-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CMS Page Viewer</h1>
+        <p>This page lets you view CMS-rendered content with different user contexts.</p>
+
+        <div class="controls">
+            <div class="form-group">
+                <label>Page Slug:</label>
+                <input type="text" id="pageSlug" value="home" placeholder="home, about, etc.">
+            </div>
+
+            <div class="form-group">
+                <label>User ID:</label>
+                <input type="text" id="userId" value="user123" placeholder="user123, vip456, etc.">
+            </div>
+
+            <div class="form-group">
+                <label>Language:</label>
+                <select id="language">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Feature Flags:</label>
+                <input type="text" id="flags" value="" placeholder="vipCustomer,newHeader (comma separated)">
+            </div>
+
+            <button onclick="loadPage()">Load Page</button>
+            <button onclick="clearContent()">Clear</button>
+        </div>
+
+        <h2>Rendered Content:</h2>
+        <div id="renderedContent" class="rendered-content">
+            Click "Load Page" to see the rendered content...
+        </div>
+
+        <div class="api-info">
+            <strong>API Call:</strong>
+            <div id="apiCall">...</div>
+            <br>
+            <strong>API Response:</strong>
+            <pre id="apiResponse">...</pre>
+        </div>
+    </div>
+
+    <script>
+        async function loadPage() {
+            const pageSlug = document.getElementById('pageSlug').value;
+            const userId = document.getElementById('userId').value;
+            const language = document.getElementById('language').value;
+            const flags = document.getElementById('flags').value;
+
+            if (!pageSlug) {
+                alert('Please enter a page slug');
+                return;
+            }
+
+            const apiCall = `GET /v1/pages/${pageSlug}`;
+            document.getElementById('apiCall').textContent = apiCall;
+
+            try {
+                // First, get the page composition from Composer
+                const composerHeaders = {
+                    'X-User-ID': userId,
+                    'Accept-Language': language
+                };
+
+                if (flags) {
+                    composerHeaders['X-Flags'] = flags;
+                }
+
+                const composerResponse = await fetch(`http://localhost:7781/v1/pages/${pageSlug}`, {
+                    headers: composerHeaders
+                });
+
+                if (!composerResponse.ok) {
+                    throw new Error(`Composer error: ${composerResponse.status}`);
+                }
+
+                const pageData = await composerResponse.json();
+
+                // Then render it via Renderer
+                const renderResponse = await fetch('http://localhost:7782/v1/render', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/html',
+                        'X-User-ID': userId,
+                        'Accept-Language': language
+                    },
+                    body: JSON.stringify({
+                        page: pageData
+                    })
+                });
+
+                if (!renderResponse.ok) {
+                    throw new Error(`Renderer error: ${renderResponse.status}`);
+                }
+
+                const htmlContent = await renderResponse.text();
+
+                // Display the rendered content
+                document.getElementById('renderedContent').innerHTML = htmlContent;
+
+                // Show the API response
+                document.getElementById('apiResponse').textContent = JSON.stringify(pageData, null, 2);
+
+            } catch (error) {
+                document.getElementById('renderedContent').innerHTML =
+                    `<div style="color: red; padding: 20px;">Error: ${error.message}</div>`;
+                document.getElementById('apiResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function clearContent() {
+            document.getElementById('renderedContent').innerHTML = 'Click "Load Page" to see the rendered content...';
+            document.getElementById('apiCall').textContent = '...';
+            document.getElementById('apiResponse').textContent = '...';
+        }
+
+        // Load the home page automatically when the page loads
+        window.onload = function() {
+            loadPage();
+        };
+    </script>
+</body>
+</html>

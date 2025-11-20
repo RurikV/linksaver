@@ -10,6 +10,7 @@ import UnverifiedRoute from "./routes/unverified";
 import VerifyRoute from "./routes/verify";
 import Protected from "./routes/protected";
 import CmsRoute from "./routes/cms";
+import ContentHub from "./routes/content-hub";
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -38,6 +39,7 @@ const App = () => {
         <Route path="/verify/:token" element={<VerifyRoute />} />
         <Route element={<Protected />}>
           <Route path="/" element={<RootRoute />} />
+          <Route path="/content-hub" element={<ContentHub />} />
         </Route>
       </Routes>
     </>

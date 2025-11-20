@@ -1,0 +1,31 @@
+{
+  "page": {
+    "version": "1.0.0",
+    "meta": {
+      "title": "Demo Page"
+    },
+    "root": {
+      "type": "Container",
+      "params": {
+        "class": "container"
+      },
+      "children": [
+        {
+          "type": "TextBlock",
+          "params": {
+            "text": "Hello World!"
+          }
+        },
+        {
+          "type": "List",
+          "params": {
+            "items": [
+              "Feature 1",
+              "Feature 2"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

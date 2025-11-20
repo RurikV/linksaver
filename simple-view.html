@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS Page - Home</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .meta { background: #f0f0f0; padding: 10px; border-radius: 4px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="meta">
+            <h2>Page Meta Information:</h2>
+            <p><strong>Title:</strong> <span id="title">Home</span></p>
+            <p><strong>Locale:</strong> <span id="locale">Loading...</span></p>
+            <p><strong>A/B Test:</strong> <span id="abtest">Loading...</span></p>
+        </div>
+
+        <h1>Rendered Content:</h1>
+        <div id="content">Loading...</div>
+    </div>
+
+    <script>
+        async function loadPage() {
+            try {
+                // Get page composition with middleware processing
+                const response = await fetch('http://localhost:7781/v1/pages/home', {
+                    headers: {
+                        'X-User-ID': 'demo_user_' + Math.floor(Math.random() * 1000),
+                        'Accept-Language': navigator.language || 'en'
+                    }
+                });
+
+                const pageData = await response.json();
+
+                // Update meta information
+                document.getElementById('title').textContent = pageData.meta.title;
+                document.getElementById('locale').textContent = pageData.meta.locale || 'en';
+                document.getElementById('abtest').textContent = pageData.meta.ab || 'N/A';
+
+                // Render the page
+                const renderResponse = await fetch('http://localhost:7782/v1/render', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/html'
+                    },
+                    body: JSON.stringify({ page: pageData })
+                });
+
+                const htmlContent = await renderResponse.text();
+                document.getElementById('content').innerHTML = htmlContent;
+
+            } catch (error) {
+                document.getElementById('content').innerHTML =
+                    `<div style="color: red; padding: 20px;">Error loading page: ${error.message}</div>`;
+            }
+        }
+
+        // Load page when opened
+        loadPage();
+    </script>
+</body>
+</html>

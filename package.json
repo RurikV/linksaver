@@ -12,5 +12,8 @@
     "cms:reset": "RESET=1 npm --prefix cms-composer run seed:reset && RESET=1 npm --prefix cms-renderer run seed:reset",
     "cms:test": "npm --prefix cms-sdk run test && npm --prefix cms-composer run test && npm --prefix cms-renderer run test && npm --prefix ui run test",
     "cms:test:coverage": "npm --prefix cms-sdk run test:coverage && npm --prefix cms-composer run test:coverage && npm --prefix cms-renderer run test:coverage && npm --prefix ui run test:coverage"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
   }
 }
