@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import styled from "styled-components";
+import { toast } from "react-toastify";
 import { useApi } from "../hooks/use-api";
 import { useAppContext } from "../context";
 
@@ -70,14 +72,191 @@ function Fragmented({ node }) {
   return renderNode(node);
 }
 
+// Modal Styled Components
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0;
+  font-size: 1.2em;
+  color: #333;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: #333;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 20px;
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+  font-family: inherit;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+`;
+
+const SaveButton = styled.button`
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background: #0056b3;
+  }
+
+  &:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+`;
+
+const CancelButton = styled.button`
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    background: #545b62;
+  }
+`;
+
+const PublicBadge = styled.span`
+  background: #28a745;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: 500;
+  margin-left: 10px;
+`;
+
 const ContentHub = () => {
-  const { getRequest, postRequest } = useApi();
+  const { getRequest, postRequest, putRequest, deleteRequest } = useApi();
   const { state } = useAppContext();
+  const user = state.user;
   const [activeTab, setActiveTab] = useState('personal');
   const [featuredContent, setFeaturedContent] = useState([]);
   const [personalContent, setPersonalContent] = useState([]);
   const [userCollections, setUserCollections] = useState([]);
   const [remixContent, setRemixContent] = useState([]);
+
+  // Modal and editing state
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'create-collection', 'edit-collection', 'view-collection'
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [editingCollection, setEditingCollection] = useState({
+    title: '',
+    description: '',
+    isPublic: false
+  });
 
   const tabs = [
     { id: 'personal', label: 'My Links' },
@@ -173,9 +352,12 @@ const ContentHub = () => {
       // Transform the data to match expected format
       const formattedCollections = collections.map(collection => ({
         id: collection.collectionId,
+        _id: collection._id, // MongoDB _id for API calls
+        userId: collection.user, // Add user reference
         title: collection.title,
         description: collection.description || '',
         items: collection.links || [],
+        cmsPages: collection.cmsPages || [], // Add CMS pages
         isPublic: collection.isPublic || false,
         likes: collection.metadata?.likes || 0,
         views: collection.metadata?.views || 0,
@@ -233,9 +415,141 @@ const ContentHub = () => {
     setRemixContent(prev => [...prev, item]);
   };
 
+  // Handler functions for Discover page buttons
+  const handleSaveToCollection = (content) => {
+    // Add CMS page to a new collection or existing collection
+    const collectionData = {
+      title: `Collection with ${content.title}`,
+      description: `Created from ${content.title}`,
+      linkIds: [],
+      cmsPages: [content.slug],
+      isPublic: false
+    };
+
+    setEditingCollection(collectionData);
+    setSelectedCollection(null);
+    setModalType('create-collection');
+    setShowModal(true);
+  };
+
+  const handleRemixContent = (content) => {
+    // Add CMS page to remix workspace
+    addToRemix({
+      type: 'cms-page',
+      slug: content.slug,
+      title: content.title,
+      content: content.content
+    });
+    setActiveTab('remix');
+  };
+
+  // Handler for collection cards
+  const handleCollectionClick = (collection) => {
+    setSelectedCollection(collection);
+    setEditingCollection({
+      title: collection.title,
+      description: collection.description || '',
+      isPublic: collection.isPublic
+    });
+    setModalType('view-collection');
+    setShowModal(true);
+  };
+
+  const handleEditCollection = (collection) => {
+    setSelectedCollection(collection);
+    setEditingCollection({
+      title: collection.title,
+      description: collection.description || '',
+      isPublic: collection.isPublic
+    });
+    setModalType('edit-collection');
+    setShowModal(true);
+  };
+
+  const handleDeleteCollection = async (collection) => {
+    if (!confirm(`Are you sure you want to delete "${collection.title}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteRequest(`collections/${collection.id}`);
+      setUserCollections(prev => prev.filter(c => c.id !== collection.id));
+      toast.success('Collection deleted successfully');
+    } catch (error) {
+      console.error("Error deleting collection:", error);
+      toast.error('Failed to delete collection');
+    }
+  };
+
+  const handleLikeCollection = async (collection) => {
+    try {
+      await postRequest(`collections/${collection.id}/like`);
+      setUserCollections(prev => prev.map(c =>
+        c.id === collection.id
+          ? { ...c, likes: c.likes + 1 }
+          : c
+      ));
+    } catch (error) {
+      console.error("Error liking collection:", error);
+    }
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedCollection(null);
+    setEditingCollection({ title: '', description: '', isPublic: false });
+  };
+
+  const saveCollection = async () => {
+    if (!editingCollection.title.trim()) {
+      toast.error('Please enter a title for your collection');
+      return;
+    }
+
+    try {
+      if (modalType === 'edit-collection' && selectedCollection) {
+        // Update existing collection
+        await putRequest(`collections/${selectedCollection.id}`, {
+          title: editingCollection.title,
+          description: editingCollection.description,
+          isPublic: editingCollection.isPublic
+        });
+
+        setUserCollections(prev => prev.map(c =>
+          c.id === selectedCollection.id
+            ? { ...c, ...editingCollection }
+            : c
+        ));
+      } else {
+        // Create new collection
+        const response = await postRequest("collections", editingCollection);
+        const result = response.data;
+
+        const newCollection = {
+          id: result.collection.collectionId,
+          title: result.collection.title,
+          description: result.collection.description,
+          items: [],
+          isPublic: result.collection.isPublic,
+          likes: 0,
+          views: 0,
+          createdAt: new Date().toISOString()
+        };
+
+        setUserCollections(prev => [...prev, newCollection]);
+      }
+
+      closeModal();
+      toast.success(modalType === 'edit-collection' ? 'Collection updated successfully!' : 'Collection created successfully!');
+    } catch (error) {
+      console.error("Error saving collection:", error);
+      toast.error('Failed to save collection');
+    }
+  };
+
   const createCollection = async () => {
     if (remixContent.length === 0) {
-      alert('Please add some items to your collection first');
+      toast.error('Please add some items to your collection first');
       return;
     }
 
@@ -282,7 +596,7 @@ const ContentHub = () => {
         setUserCollections(prev => [...prev, newCollection]);
         setRemixContent([]);
         setActiveTab('collections');
-        alert('Collection created successfully!');
+        toast.success('Collection created successfully!');
       } else {
         throw new Error('Failed to create collection');
       }
@@ -303,7 +617,7 @@ const ContentHub = () => {
       setUserCollections(prev => [...prev, newCollection]);
       setRemixContent([]);
       setActiveTab('collections');
-      alert('Collection created locally (will sync when API is available)');
+      toast.info('Collection created locally (will sync when API is available)');
     }
   };
 
@@ -451,17 +765,22 @@ const ContentHub = () => {
               background: '#f8f9fa',
               borderTop: '1px solid #e0e0e0'
             }}>
-              <button style={{
+              <button
+              onClick={() => handleSaveToCollection(content)}
+              style={{
                 background: '#28a745',
                 color: 'white',
                 border: 'none',
                 padding: '8px 16px',
                 borderRadius: '4px',
                 cursor: 'pointer'
-              }}>
-                Save to Collection
-              </button>
-              <button style={{
+              }}
+            >
+              Save to Collection
+            </button>
+            <button
+              onClick={() => handleRemixContent(content)}
+              style={{
                 background: '#17a2b8',
                 color: 'white',
                 border: 'none',
@@ -469,9 +788,10 @@ const ContentHub = () => {
                 borderRadius: '4px',
                 cursor: 'pointer',
                 marginLeft: '10px'
-              }}>
-                Remix
-              </button>
+              }}
+            >
+              Remix
+            </button>
             </div>
           </div>
         ))}
@@ -549,8 +869,10 @@ const ContentHub = () => {
                 cursor: 'pointer'
               }}
               onClick={() => {
-                // Show collection details
-                alert(`Collection: ${collection.title}\nItems: ${collection.items.length}\nStatus: ${collection.isPublic ? 'Public' : 'Private'}`);
+                // Show collection details in modal
+                setSelectedCollection(collection);
+                setModalType('view-collection');
+                setShowModal(true);
               }}
               >
                 <div style={{
@@ -618,12 +940,93 @@ const ContentHub = () => {
                       {collection.createdAt && new Date(collection.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  {collection.isPublic && (
-                    <div style={{ fontSize: '0.8em', color: '#6c757d' }}>
-                      {collection.likes > 0 && <span style={{ marginRight: '15px' }}>Likes: {collection.likes}</span>}
-                      {collection.views > 0 && <span>Views: {collection.views}</span>}
-                    </div>
-                  )}
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    justifyContent: 'flex-end',
+                    padding: '10px 0'
+                  }}>
+                    <button
+                      onClick={() => handleCollectionClick(collection)}
+                      style={{
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8em',
+                        marginRight: '4px'
+                      }}
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => handleEditCollection(collection)}
+                      style={{
+                        background: '#ffc107',
+                        color: '#333',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8em',
+                        marginRight: '4px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    {collection.isPublic ? (
+                      <button
+                        onClick={() => handleLikeCollection(collection)}
+                        style={{
+                          background: '#e83e8c',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.8em',
+                          marginRight: '4px'
+                        }}
+                      >
+                        Likes ({collection.likes})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          collection.isPublic = true;
+                          handleEditCollection(collection);
+                        }}
+                        style={{
+                          background: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '0.8em',
+                          marginRight: '4px'
+                        }}
+                      >
+                        Make Public
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteCollection(collection)}
+                      style={{
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8em'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -894,6 +1297,126 @@ const ContentHub = () => {
       <div className="content-area">
         {renderContent()}
       </div>
+
+      {/* Collection Modal */}
+      {showModal && (
+        <ModalOverlay>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>
+                {modalType === 'create-collection' && 'Create New Collection'}
+                {modalType === 'edit-collection' && 'Edit Collection'}
+                {modalType === 'view-collection' && 'Collection Details'}
+              </ModalTitle>
+              <CloseButton onClick={() => setShowModal(false)}>×</CloseButton>
+            </ModalHeader>
+
+            <ModalBody>
+              {modalType === 'view-collection' && selectedCollection && (
+                <div>
+                  <div style={{ marginBottom: '15px' }}>
+                    <strong>{selectedCollection.title}</strong>
+                    {selectedCollection.isPublic && <PublicBadge>PUBLIC</PublicBadge>}
+                  </div>
+                  <div style={{ marginBottom: '15px', color: '#666', fontSize: '0.9em' }}>
+                    {selectedCollection.description || 'No description'}
+                  </div>
+                  <div style={{ marginBottom: '15px' }}>
+                    <div style={{ fontSize: '0.9em', color: '#666' }}>
+                      {selectedCollection.links?.length || 0} links •
+                      {selectedCollection.cmsPages?.length || 0} pages •
+                      {selectedCollection.likes || 0} likes
+                    </div>
+                  </div>
+                  {(selectedCollection.cmsPages && selectedCollection.cmsPages.length > 0) && (
+                    <div style={{ marginTop: '15px' }}>
+                      <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '8px' }}>CMS Pages:</div>
+                      {selectedCollection.cmsPages.map((page, idx) => (
+                        <div key={idx} style={{
+                          padding: '8px',
+                          background: '#f8f9fa',
+                          borderRadius: '4px',
+                          marginBottom: '5px',
+                          fontSize: '0.85em'
+                        }}>
+                          <strong>{page.title}</strong>
+                          {page.description && <div style={{ color: '#666' }}>{page.description}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(modalType === 'create-collection' || modalType === 'edit-collection') && (
+                <FormGroup>
+                  <Label>Title *</Label>
+                  <Input
+                    type="text"
+                    value={editingCollection?.title || ''}
+                    onChange={(e) => setEditingCollection(prev => prev ? {...prev, title: e.target.value} : null)}
+                    placeholder="Enter collection title"
+                  />
+                </FormGroup>
+              )}
+
+              {(modalType === 'create-collection' || modalType === 'edit-collection') && (
+                <FormGroup>
+                  <Label>Description</Label>
+                  <TextArea
+                    value={editingCollection?.description || ''}
+                    onChange={(e) => setEditingCollection(prev => prev ? {...prev, description: e.target.value} : null)}
+                    placeholder="Describe your collection"
+                    rows={3}
+                  />
+                </FormGroup>
+              )}
+
+              {modalType === 'edit-collection' && selectedCollection && (
+                <FormGroup>
+                  <CheckboxLabel>
+                    <input
+                      type="checkbox"
+                      checked={editingCollection?.isPublic || false}
+                      onChange={(e) => setEditingCollection(prev => prev ? {...prev, isPublic: e.target.checked} : null)}
+                    />
+                    Make collection public
+                  </CheckboxLabel>
+                </FormGroup>
+              )}
+            </ModalBody>
+
+            <ModalFooter>
+              {(modalType === 'create-collection' || modalType === 'edit-collection') && (
+                <>
+                  <CancelButton onClick={() => setShowModal(false)}>Cancel</CancelButton>
+                  <SaveButton onClick={handleSaveCollection}>
+                    {modalType === 'create-collection' ? 'Create' : 'Save'}
+                  </SaveButton>
+                </>
+              )}
+
+              {modalType === 'view-collection' && selectedCollection && (
+                <>
+                  <CancelButton onClick={() => setShowModal(false)}>Close</CancelButton>
+                  {selectedCollection.userId === user?.details?.id && (
+                    <SaveButton onClick={() => {
+                      setModalType('edit-collection');
+                      setEditingCollection({
+                        title: selectedCollection.title,
+                        description: selectedCollection.description,
+                        isPublic: selectedCollection.isPublic
+                      });
+                    }}>
+                      Edit
+                    </SaveButton>
+                  )}
+                </>
+              )}
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      )}
     </div>
   );
 };
