@@ -14,7 +14,7 @@
  */
 
 import { BaseComponent } from './BaseComponent';
-import { IComponent, ComponentContext, RenderContext, RenderResult, ComponentMetadata, ValidationError, ValidationWarning } from '../interfaces';
+import { IComponent, ComponentContext, RenderContext, RenderResult, ComponentMetadata, ValidationError, ValidationWarning, ValidationResult } from '../interfaces';
 
 export interface ComponentPosition {
   zone: string;
@@ -33,6 +33,11 @@ export interface ComponentNode {
   position: ComponentPosition;
   parent?: CompositeComponent;
   children: ComponentNode[];
+}
+
+export interface ExtendedRenderResult extends RenderResult {
+  zone: string;
+  position: ComponentPosition;
 }
 
 /**
@@ -84,13 +89,16 @@ export class CompositeComponent extends BaseComponent {
     this.addToZone(position.zone, node);
     this.updateRenderOrder();
 
-    component.on('initialized', (data: any) => {
-      this.emit('child-initialized', { parent: this, child: component, data });
-    });
+    // Check if component has event handling capabilities (extends BaseComponent)
+    if (component instanceof BaseComponent) {
+      component.on('initialized', (data: any) => {
+        this.emit('child-initialized', { parent: this, child: component, data });
+      });
 
-    component.on('rendered', (data: any) => {
-      this.emit('child-rendered', { parent: this, child: component, data });
-    });
+      component.on('rendered', (data: any) => {
+        this.emit('child-rendered', { parent: this, child: component, data });
+      });
+    }
   }
 
   /**
@@ -288,7 +296,7 @@ export class CompositeComponent extends BaseComponent {
   }
 
   protected async doRender(context: RenderContext): Promise<RenderResult> {
-    const childResults: RenderResult[] = [];
+    const childResults: ExtendedRenderResult[] = [];
     const allAssets: any[] = [];
 
     try {
@@ -303,7 +311,7 @@ export class CompositeComponent extends BaseComponent {
             ...childResult,
             zone,
             position: node.position
-          });
+          } as ExtendedRenderResult);
 
           // Collect assets
           allAssets.push(...childResult.assets);
@@ -335,7 +343,7 @@ export class CompositeComponent extends BaseComponent {
     const warnings: ValidationWarning[] = [];
 
     // Validate zones configuration
-    const configuredZones = this.getConfig('zones', []);
+    const configuredZones = this.getConfig('zones', [] as string[]);
     for (const zone of configuredZones) {
       if (typeof zone !== 'string') {
         errors.push({
@@ -374,7 +382,7 @@ export class CompositeComponent extends BaseComponent {
   // ==================== Private Methods ====================
 
   private canAddChild(component: IComponent): boolean {
-    const allowedTypes = this.getConfig('allowedChildTypes', []);
+    const allowedTypes = this.getConfig('allowedChildTypes', [] as string[]);
     if (allowedTypes.length === 0) {
       return true; // No restrictions
     }
@@ -400,7 +408,7 @@ export class CompositeComponent extends BaseComponent {
   }
 
   private updateRenderOrder(): void {
-    const configuredOrder = this.getConfig('renderOrder', []);
+    const configuredOrder = this.getConfig('renderOrder', [] as string[]);
     const availableZones = Array.from(this.zones.keys());
 
     this.renderOrder = [
@@ -410,7 +418,7 @@ export class CompositeComponent extends BaseComponent {
   }
 
   private async renderContainer(
-    childResults: Array<RenderResult & { zone: string; position: ComponentPosition }>,
+    childResults: ExtendedRenderResult[],
     context: RenderContext
   ): Promise<string> {
     const layoutConfig = this.getConfig('layout', 'vertical');

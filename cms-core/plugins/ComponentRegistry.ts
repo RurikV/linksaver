@@ -179,7 +179,7 @@ export class ComponentRegistry {
         metadata.configuration = { ...metadata.configuration, ...configuration };
       }
 
-      const component = await factory.createComponent(id, metadata);
+      const component = await factory.create(type, metadata);
       return component;
     } catch (error) {
       throw new Error(`Failed to create component ${type}: ${getErrorMessage(error)}`);

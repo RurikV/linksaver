@@ -55,6 +55,10 @@ export class PageBuilder implements IPageBuilder {
   private page: Partial<Page>;
   private buildContext: BuildContext;
   private currentZone: string = 'main';
+  private tempComponents: Array<{
+    component: IComponent;
+    position: ComponentPosition;
+  }> = [];
 
   constructor(
     private registry: ComponentRegistry,
@@ -75,6 +79,7 @@ export class PageBuilder implements IPageBuilder {
   reset(): IPageBuilder {
     this.page = {};
     this.currentZone = 'main';
+    this.tempComponents = [];
     this.buildContext.cache.clear();
     return this;
   }
@@ -110,11 +115,7 @@ export class PageBuilder implements IPageBuilder {
       responsive: position?.responsive
     };
 
-    if (!this.page.components) {
-      this.page.components = [];
-    }
-
-    this.page.components.push({ component, position: componentPosition });
+    this.tempComponents.push({ component, position: componentPosition });
     return this;
   }
 
@@ -184,7 +185,8 @@ export class PageBuilder implements IPageBuilder {
         layout,
         zones: ['main'],
         allowedChildTypes: []
-      }
+      },
+      dependencies: []
     };
 
     const container = new CompositeComponent(id, containerType, metadata, layout);
@@ -235,13 +237,33 @@ export class PageBuilder implements IPageBuilder {
         await this.optimizePagePerformance();
       }
 
+      // Convert temp components to Map structure
+      const componentsMap = new Map<string, IComponent>();
+      const zoneComponentsMap = new Map<string, IComponent[]>();
+
+      for (const { component, position } of this.tempComponents) {
+        componentsMap.set(component.id, component);
+
+        // Add to zone components
+        if (!zoneComponentsMap.has(position.zone)) {
+          zoneComponentsMap.set(position.zone, []);
+        }
+        const zoneComps = zoneComponentsMap.get(position.zone)!;
+        zoneComps[position.order] = component;
+      }
+
+      // Remove empty slots from zone arrays
+      for (const [zone, components] of zoneComponentsMap) {
+        zoneComponentsMap.set(zone, components.filter(Boolean));
+      }
+
       const page: Page = {
         id: this.generatePageId(),
         metadata: this.page.metadata!,
         layout: this.page.layout!,
-        components: this.page.components!.map(item => item.component),
+        components: componentsMap,
         theme: this.page.theme || this.buildContext.theme,
-        zoneComponents: this.page.zoneComponents || new Map(),
+        zoneComponents: zoneComponentsMap,
         buildDate: new Date(),
         version: this.generateVersion(),
         status: 'active'
@@ -288,7 +310,7 @@ export class PageBuilder implements IPageBuilder {
     }
 
     // Validate components
-    if (!this.page.components || this.page.components.length === 0) {
+    if (this.tempComponents.length === 0) {
       warnings.push({
         code: 'NO_COMPONENTS',
         message: 'Page has no components',
@@ -296,7 +318,7 @@ export class PageBuilder implements IPageBuilder {
       });
     } else {
       // Check for duplicate IDs
-      const componentIds = this.page.components.map(item => item.component.id);
+      const componentIds = this.tempComponents.map(item => item.component.id);
       const duplicates = componentIds.filter((id, index) => componentIds.indexOf(id) !== index);
       if (duplicates.length > 0) {
         errors.push({
@@ -307,7 +329,7 @@ export class PageBuilder implements IPageBuilder {
       }
 
       // Validate each component
-      for (const { component } of this.page.components) {
+      for (const { component } of this.tempComponents) {
         const validation = component.validate();
         if (!validation.isValid) {
           errors.push(...validation.errors.map(error => ({
@@ -323,7 +345,7 @@ export class PageBuilder implements IPageBuilder {
     }
 
     // Generate suggestions
-    if (this.page.components && this.page.components.length > 10) {
+    if (this.tempComponents.length > 10) {
       suggestions.push({
         code: 'OPTIMIZE_PERFORMANCE',
         message: 'Page has many components',
@@ -353,6 +375,11 @@ export class PageBuilder implements IPageBuilder {
         info: '#17a2b8',
         light: '#f8f9fa',
         dark: '#343a40'
+      },
+      fonts: {
+        primary: 'Arial, sans-serif',
+        secondary: 'Georgia, serif',
+        monospace: 'Courier New, monospace'
       },
       typography: {
         fontFamily: 'Arial, sans-serif',
@@ -395,8 +422,7 @@ export class PageBuilder implements IPageBuilder {
   }
 
   private getNextOrderForZone(zone: string): number {
-    const zoneComponents = this.page.zoneComponents?.get(zone) || [];
-    return zoneComponents.length;
+    return this.tempComponents.filter(comp => comp.position.zone === zone).length;
   }
 
   private createDefaultLayout(): void {
@@ -416,25 +442,8 @@ export class PageBuilder implements IPageBuilder {
   }
 
   private async buildComponentHierarchy(): Promise<void> {
-    if (!this.page.components || !this.page.zoneComponents) {
-      return;
-    }
-
-    // Build zone component map
-    for (const { component, position } of this.page.components) {
-      if (!this.page.zoneComponents.has(position.zone)) {
-        this.page.zoneComponents.set(position.zone, []);
-      }
-
-      const zoneComponents = this.page.zoneComponents.get(position.zone)!;
-      zoneComponents[position.order] = component;
-    }
-
-    // Remove empty slots
-    for (const [zone, components] of this.page.zoneComponents) {
-      const filteredComponents = components.filter(Boolean);
-      this.page.zoneComponents.set(zone, filteredComponents);
-    }
+    // Component hierarchy is now built in the build method
+    // This method is kept for compatibility but can be simplified
   }
 
   private async generatePageMetadata(): Promise<void> {
@@ -443,19 +452,19 @@ export class PageBuilder implements IPageBuilder {
     }
 
     // Count components
-    const componentCount = this.page.components?.length || 0;
-    this.page.metadata.componentCount = componentCount;
+    const componentCount = this.tempComponents.length;
+    (this.page.metadata as any).componentCount = componentCount;
 
     // Generate description from components if not provided
     if (!this.page.metadata.description && componentCount > 0) {
-      const firstComponent = this.page.components![0].component;
+      const firstComponent = this.tempComponents[0].component;
       this.page.metadata.description = `Page containing ${componentCount} components, starting with ${firstComponent.type}`;
     }
   }
 
   private async applyThemeToComponents(): Promise<void> {
     // Apply theme to components recursively
-    for (const { component } of this.page.components || []) {
+    for (const { component } of this.tempComponents) {
       if (component instanceof CompositeComponent) {
         await this.applyThemeToComposite(component);
       }
@@ -473,14 +482,12 @@ export class PageBuilder implements IPageBuilder {
 
   private async optimizePagePerformance(): Promise<void> {
     // Optimize component loading order
-    if (this.page.components) {
-      this.page.components.sort((a, b) => {
-        // Sort by priority: headers first, then main content, then footers
-        const aPriority = this.getComponentPriority(a.component);
-        const bPriority = this.getComponentPriority(b.component);
-        return aPriority - bPriority;
-      });
-    }
+    this.tempComponents.sort((a, b) => {
+      // Sort by priority: headers first, then main content, then footers
+      const aPriority = this.getComponentPriority(a.component);
+      const bPriority = this.getComponentPriority(b.component);
+      return aPriority - bPriority;
+    });
   }
 
   private getComponentPriority(component: IComponent): number {

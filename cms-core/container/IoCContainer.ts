@@ -13,7 +13,7 @@
  * L: Liskov Substitution - Any implementation can be substituted
  */
 
-import { ServiceIdentifier } from './types';
+import { ServiceIdentifier, Constructor } from './types';
 
 export interface IServiceFactory {
   create(container: IoCContainer): any;
@@ -33,7 +33,6 @@ export interface ServiceRegistration {
   metadata?: ServiceMetadata;
 }
 
-export type ServiceIdentifier = string | symbol | (new (...args: any[]) => any);
 export type ServiceMetadata = Record<string, any>;
 
 /**
@@ -53,7 +52,7 @@ export class IoCContainer {
    */
   register<T>(
     identifier: ServiceIdentifier,
-    factory: IServiceFactory | ((container: IoCContainer) => T) | (new (...args: any[]) => T) | T,
+    factory: IServiceFactory | ((container: IoCContainer) => T) | Constructor<T> | T,
     lifetime: ServiceLifetime = ServiceLifetime.Transient,
     metadata?: ServiceMetadata
   ): IoCContainer {
@@ -61,22 +60,23 @@ export class IoCContainer {
 
     if (this.isServiceFactory(factory)) {
       serviceFactory = factory;
-    } else if (typeof factory === 'function') {
+    } else if (this.isConstructor(factory)) {
+      // Constructor function
       serviceFactory = {
         create: (container) => {
-          if (this.isConstructor(factory)) {
-            // Resolve constructor dependencies
-            const dependencies = this.resolveConstructorDependencies(factory);
-            return new factory(...dependencies);
-          } else {
-            // Factory function
-            return factory(container);
-          }
+          // Resolve constructor dependencies
+          const dependencies = this.resolveConstructorDependencies(factory as Constructor);
+          return new (factory as Constructor<T>)(...(dependencies as any[]));
         }
+      };
+    } else if (typeof factory === 'function') {
+      // Factory function
+      serviceFactory = {
+        create: (container) => (factory as (container: IoCContainer) => T)(container)
       };
     } else {
       // Instance
-      serviceFactory = { create: () => factory };
+      serviceFactory = { create: () => factory as T };
     }
 
     this.registrations.set(identifier, {
@@ -93,7 +93,7 @@ export class IoCContainer {
    */
   registerSingleton<T>(
     identifier: ServiceIdentifier,
-    factory: IServiceFactory | ((container: IoCContainer) => T) | (new (...args: any[]) => T) | T,
+    factory: IServiceFactory | ((container: IoCContainer) => T) | Constructor<T> | T,
     metadata?: ServiceMetadata
   ): IoCContainer {
     return this.register(identifier, factory, ServiceLifetime.Singleton, metadata);
@@ -104,7 +104,7 @@ export class IoCContainer {
    */
   registerScoped<T>(
     identifier: ServiceIdentifier,
-    factory: IServiceFactory | ((container: IoCContainer) => T) | (new (...args: any[]) => T) | T,
+    factory: IServiceFactory | ((container: IoCContainer) => T) | Constructor<T> | T,
     metadata?: ServiceMetadata
   ): IoCContainer {
     return this.register(identifier, factory, ServiceLifetime.Scoped, metadata);
@@ -126,7 +126,7 @@ export class IoCContainer {
     }
 
     // Check if instance already exists based on lifetime
-    let instance = this.getInstance(identifier, registration.lifetime);
+    let instance = this.getInstance<T>(identifier, registration.lifetime);
     if (instance !== undefined) {
       return instance;
     }
@@ -135,7 +135,7 @@ export class IoCContainer {
       this.creating.add(identifier);
 
       // Create new instance
-      instance = registration.factory.create(this);
+      instance = registration.factory.create(this) as T;
 
       // Store instance based on lifetime
       this.setInstance(identifier, instance, registration.lifetime);
@@ -208,11 +208,11 @@ export class IoCContainer {
   ): T | undefined {
     switch (lifetime) {
       case ServiceLifetime.Singleton:
-        return this.instances.get(identifier);
+        return this.instances.get(identifier) as T;
       case ServiceLifetime.Scoped:
         if (this.scopeId) {
           const scopeMap = this.scopedInstances.get(this.scopeId);
-          return scopeMap?.get(identifier);
+          return scopeMap?.get(identifier) as T;
         }
         return undefined;
       case ServiceLifetime.Transient:
@@ -264,11 +264,11 @@ export class IoCContainer {
   /**
    * Resolve constructor dependencies using reflection
    */
-  private resolveConstructorDependencies(constructor: any): any[] {
+  private resolveConstructorDependencies(constructor: Constructor): unknown[] {
     // Simple dependency injection based on parameter count
     // In production, you would use reflect-metadata or decorators
     const paramCount = constructor.length;
-    const dependencies: any[] = [];
+    const dependencies: unknown[] = [];
 
     for (let i = 0; i < paramCount; i++) {
       // This is simplified - in production you'd use @inject decorators

@@ -34,6 +34,8 @@
  * - Configuration Service
  */
 
+import { IoCContainer } from './container/IoCContainer';
+
 // ==================== CORE INTERFACES ====================
 
 /**
@@ -109,7 +111,10 @@ interface IPageBuilder {
   reset(): IPageBuilder;
   setMetadata(metadata: PageMetadata): IPageBuilder;
   addComponent(component: IComponent, position?: ComponentPosition): IPageBuilder;
-  addComponents(components: IComponent[]): IPageBuilder;
+  addComponents(components: Array<{
+    component: IComponent;
+    position?: Partial<ComponentPosition>;
+  }>): IPageBuilder;
   setLayout(layout: PageLayout): IPageBuilder;
   setTheme(theme: ThemeConfig): IPageBuilder;
   build(): Promise<Page>;
@@ -178,7 +183,13 @@ type PageMetadata = {
 type ComponentPosition = {
   zone: string;
   order: number;
-  responsive?: ResponsiveConfiguration;
+  width?: string;
+  height?: string;
+  responsive?: {
+    mobile?: Partial<ComponentPosition>;
+    tablet?: Partial<ComponentPosition>;
+    desktop?: Partial<ComponentPosition>;
+  };
 };
 
 type PageLayout = {
@@ -226,14 +237,12 @@ export interface IComponentFactory {
   create(type: string, metadata: ComponentMetadata): Promise<IComponent>;
   canCreate(type: string): boolean;
   getSupportedTypes(): string[];
+  getMetadata(): ComponentMetadata;
 }
 
-export interface IoCContainer {
-  register<T>(key: string, factory: () => T): void;
-  get<T>(key: string): T;
-  has(key: string): boolean;
-  resolve<T>(key: string): Promise<T>;
-}
+// Import the actual IoCContainer and types from their implementation files
+export { IoCContainer, ServiceLifetime, ServiceRegistration } from './container/IoCContainer';
+export { ServiceIdentifier, Constructor } from './container/types';
 
 export interface Page {
   id: string;
@@ -241,12 +250,25 @@ export interface Page {
   layout: PageLayout;
   components: Map<string, IComponent>;
   theme: ThemeConfig;
+  zoneComponents?: Map<string, IComponent[]>;
+  buildDate?: Date;
+  version?: string;
+  status?: 'active' | 'inactive' | 'draft';
 }
 
 export interface ThemeConfig {
   name: string;
   colors: Record<string, string>;
   fonts: Record<string, string>;
+  typography: {
+    fontFamily: string;
+    fontSize: {
+      base: string;
+      small: string;
+      large: string;
+      heading: string;
+    };
+  };
   spacing: Record<string, string>;
   breakpoints: Record<string, string>;
 }
@@ -270,6 +292,7 @@ export interface RequestContext {
   url: string;
   headers: Record<string, string>;
   query: Record<string, string>;
+  params: Record<string, string>;
   body?: any;
   user?: any;
 }
