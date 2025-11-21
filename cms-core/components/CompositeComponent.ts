@@ -14,7 +14,7 @@
  */
 
 import { BaseComponent } from './BaseComponent';
-import { IComponent, ComponentContext, RenderContext, RenderResult, ComponentMetadata } from '../../interfaces';
+import { IComponent, ComponentContext, RenderContext, RenderResult, ComponentMetadata, ValidationError, ValidationWarning } from '../interfaces';
 
 export interface ComponentPosition {
   zone: string;

@@ -194,4 +194,178 @@ type LayoutZone = {
   configuration?: ComponentConfiguration;
 };
 
-export {};
+// ==================== EXPORTS ====================
+
+// Core Interfaces
+export {
+  IComponent,
+  IComponentLifecycle,
+  IComponentPlugin,
+  IRenderingStrategy,
+  IPipelineMiddleware,
+  IPageBuilder
+};
+
+// Type Definitions
+export type {
+  ComponentMetadata,
+  ComponentConfiguration,
+  ComponentContext,
+  RenderContext,
+  RenderResult,
+  ValidationResult,
+  PipelineContext,
+  PageMetadata,
+  ComponentPosition,
+  PageLayout,
+  LayoutZone
+};
+
+// Additional interfaces that need to be defined (placeholder implementations)
+export interface IComponentFactory {
+  create(type: string, metadata: ComponentMetadata): Promise<IComponent>;
+  canCreate(type: string): boolean;
+  getSupportedTypes(): string[];
+}
+
+export interface IoCContainer {
+  register<T>(key: string, factory: () => T): void;
+  get<T>(key: string): T;
+  has(key: string): boolean;
+  resolve<T>(key: string): Promise<T>;
+}
+
+export interface Page {
+  id: string;
+  metadata: PageMetadata;
+  layout: PageLayout;
+  components: Map<string, IComponent>;
+  theme: ThemeConfig;
+}
+
+export interface ThemeConfig {
+  name: string;
+  colors: Record<string, string>;
+  fonts: Record<string, string>;
+  spacing: Record<string, string>;
+  breakpoints: Record<string, string>;
+}
+
+export interface ICacheProvider {
+  get<T>(key: string): Promise<T | null>;
+  set<T>(key: string, value: T, ttl?: number): Promise<void>;
+  delete(key: string): Promise<boolean>;
+  clear(): Promise<void>;
+}
+
+export interface ServiceContainer {
+  get<T>(key: string): T;
+  register<T>(key: string, service: T): void;
+  has(key: string): boolean;
+}
+
+export interface RequestContext {
+  id: string;
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  query: Record<string, string>;
+  body?: any;
+  user?: any;
+}
+
+export interface ResponseContext {
+  status: number;
+  headers: Record<string, string>;
+  body?: any;
+}
+
+export interface AssetReference {
+  id: string;
+  type: 'css' | 'js' | 'image' | 'font' | 'other';
+  url: string;
+  integrity?: string;
+  crossOrigin?: string;
+}
+
+export interface RenderMetadata {
+  component?: string;
+  error?: string;
+  timestamp?: string;
+  [key: string]: any;
+}
+
+export interface RenderError {
+  code: string;
+  message: string;
+  severity: 'error' | 'warning';
+  component?: string;
+}
+
+export interface ValidationError {
+  code: string;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+  path?: string;
+}
+
+export interface ValidationWarning {
+  code: string;
+  message: string;
+  severity: 'warning' | 'info';
+  path?: string;
+}
+
+export interface ResponsiveConfiguration {
+  mobile: Record<string, any>;
+  tablet: Record<string, any>;
+  desktop: Record<string, any>;
+}
+
+export interface SEOConfiguration {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  canonical?: string;
+  robots?: string;
+  openGraph?: Record<string, any>;
+  jsonLd?: Record<string, any>;
+}
+
+export interface AssetManager {
+  addAsset(asset: AssetReference): void;
+  getAssets(type?: string): AssetReference[];
+  removeAsset(id: string): boolean;
+  clear(): void;
+}
+
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Helper function to safely extract error message from unknown error type
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String(error.message);
+  }
+  return 'An unknown error occurred';
+}
+
+/**
+ * Helper function to safely extract error code from unknown error type
+ */
+export function getErrorCode(error: unknown): string {
+  if (error instanceof Error) {
+    return error.name;
+  }
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    return String(error.code);
+  }
+  return 'UNKNOWN_ERROR';
+}

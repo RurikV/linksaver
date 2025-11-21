@@ -13,7 +13,7 @@
  * I: Interface Segregation - focused registry interface
  */
 
-import { IComponent, IComponentPlugin, IComponentFactory, ComponentMetadata } from '../../interfaces';
+import { IComponent, IComponentPlugin, IComponentFactory, ComponentMetadata, getErrorMessage } from '../interfaces';
 import { IoCContainer } from '../container/IoCContainer';
 
 export interface ComponentRegistration {
@@ -125,7 +125,7 @@ export class ComponentRegistry {
         timestamp: new Date()
       });
     } catch (error) {
-      throw new Error(`Failed to load plugin ${plugin.name}: ${error.message}`);
+      throw new Error(`Failed to load plugin ${plugin.name}: ${getErrorMessage(error)}`);
     }
   }
 
@@ -157,7 +157,7 @@ export class ComponentRegistry {
         timestamp: new Date()
       });
     } catch (error) {
-      throw new Error(`Failed to unload plugin ${name}: ${error.message}`);
+      throw new Error(`Failed to unload plugin ${name}: ${getErrorMessage(error)}`);
     }
   }
 
@@ -182,7 +182,7 @@ export class ComponentRegistry {
       const component = await factory.createComponent(id, metadata);
       return component;
     } catch (error) {
-      throw new Error(`Failed to create component ${type}: ${error.message}`);
+      throw new Error(`Failed to create component ${type}: ${getErrorMessage(error)}`);
     }
   }
 

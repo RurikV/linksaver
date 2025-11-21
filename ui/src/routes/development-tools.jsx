@@ -1081,7 +1081,7 @@ const DevelopmentTools = () => {
       ];
 
       const apiDoc = docGeneratorRef.current.generateAPIDocumentation(apiRoutes);
-      const componentDoc = docGenerator.current.generateComponentDocumentation(components);
+      const componentDoc = docGeneratorRef.current.generateComponentDocumentation(components);
 
       setDocumentation({
         api: apiDoc,

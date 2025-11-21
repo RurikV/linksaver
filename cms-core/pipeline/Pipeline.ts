@@ -13,7 +13,7 @@
  * S: Single Responsibility - each middleware handles one concern
  */
 
-import { IPipelineMiddleware, PipelineContext } from '../../interfaces';
+import { IPipelineMiddleware, PipelineContext, getErrorMessage } from '../interfaces';
 
 export interface PipelineResult {
   success: boolean;
@@ -266,7 +266,7 @@ export class ErrorHandlingMiddleware implements IPipelineMiddleware {
       context.response.status = 500;
       context.response.body = {
         error: 'Internal Server Error',
-        message: error.message,
+        message: getErrorMessage(error),
         timestamp: new Date().toISOString()
       };
       throw error;

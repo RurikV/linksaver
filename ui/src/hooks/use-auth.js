@@ -39,7 +39,7 @@ export const useAuth = ({ onAuth = false, onUnauth = false }) => {
             navigate(onAuth);
           }
         }
-      } catch (err) {
+      } catch {
         localStorage.removeItem(localStorageKeys.AUTH_TOKEN);
         navigate("/login");
       }

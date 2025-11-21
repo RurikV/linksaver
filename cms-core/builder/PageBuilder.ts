@@ -13,7 +13,7 @@
  * D: Dependency Inversion - Depends on interfaces, not concretions
  */
 
-import { IComponent, IPageBuilder, Page, PageMetadata, PageLayout, ThemeConfig, ComponentPosition } from '../../interfaces';
+import { IComponent, IPageBuilder, Page, PageMetadata, PageLayout, ThemeConfig, ComponentPosition, ValidationError, ValidationWarning, getErrorMessage } from '../interfaces';
 import { CompositeComponent } from '../components/CompositeComponent';
 import { ComponentRegistry } from '../plugins/ComponentRegistry';
 
@@ -39,16 +39,7 @@ export interface PageValidationResult {
   suggestions: ValidationSuggestion[];
 }
 
-export interface ValidationError {
-  code: string;
-  message: string;
-  component?: string;
-  severity: 'error' | 'warning' | 'info';
-}
-
-export interface ValidationWarning extends Omit<ValidationError, 'severity'> {
-  severity: 'warning';
-}
+// ValidationError and ValidationWarning are now imported from interfaces.ts
 
 export interface ValidationSuggestion {
   code: string;
@@ -258,7 +249,7 @@ export class PageBuilder implements IPageBuilder {
 
       return page;
     } catch (error) {
-      throw new Error(`Page build failed: ${error.message}`);
+      throw new Error(`Page build failed: ${getErrorMessage(error)}`);
     }
   }
 

@@ -14,7 +14,7 @@
  * I: Interface Segregation - focused interfaces
  */
 
-import { IComponent, IComponentLifecycle, ComponentMetadata, ComponentContext, RenderContext, RenderResult, ValidationResult } from '../../interfaces';
+import { IComponent, IComponentLifecycle, ComponentMetadata, ComponentContext, RenderContext, RenderResult, ValidationResult, ValidationError, ValidationWarning, RenderError, RenderMetadata, getErrorMessage } from '../interfaces';
 
 export abstract class BaseComponent implements IComponent {
   public readonly id: string;
@@ -150,7 +150,7 @@ export abstract class BaseComponent implements IComponent {
     } catch (error) {
       errors.push({
         code: 'VALIDATION_ERROR',
-        message: `Validation failed: ${error.message}`,
+        message: `Validation failed: ${getErrorMessage(error)}`,
         severity: 'error'
       });
     }
@@ -345,18 +345,18 @@ export abstract class BaseComponent implements IComponent {
     return {
       content: `<div class="component-error">
         <h4>Component Error: ${this.type}</h4>
-        <p>${error.message}</p>
+        <p>${getErrorMessage(error)}</p>
       </div>`,
       assets: [],
       metadata: {
         component: this.type,
-        error: error.message,
+        error: getErrorMessage(error),
         timestamp: new Date().toISOString()
       },
       status: 'error',
       errors: [{
         code: 'RENDER_ERROR',
-        message: error.message,
+        message: getErrorMessage(error),
         severity: 'error'
       }]
     };
@@ -378,21 +378,4 @@ export abstract class BaseComponent implements IComponent {
 }
 
 // ==================== Type Definitions ====================
-
-export type ValidationError = {
-  code: string;
-  message: string;
-  severity: 'error' | 'warning' | 'info';
-  path?: string;
-};
-
-export type ValidationWarning = Omit<ValidationError, 'severity'> & { severity: 'warning' | 'info' };
-
-export type RenderError = {
-  code: string;
-  message: string;
-  severity: 'error' | 'warning';
-  component?: string;
-};
-
-export type RenderMetadata = Record<string, any>;
+// ValidationError, ValidationWarning, RenderError, and RenderMetadata are now imported from interfaces.ts

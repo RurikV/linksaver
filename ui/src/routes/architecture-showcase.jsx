@@ -14,8 +14,7 @@
  * - Plugin Architecture
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import styled from 'styled-components';
 
@@ -187,41 +186,16 @@ const TableCell = styled.td`
   `}
 `;
 
-const PerformanceMetrics = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin: 20px 0;
-`;
-
-const MetricCard = styled.div`
-  text-align: center;
-  padding: 20px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-`;
-
-const MetricValue = styled.div`
-  font-size: 2em;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 5px;
-`;
-
-const MetricLabel = styled.div`
-  font-size: 0.9em;
-  color: #666;
-`;
-
-const ArchitectureDiagram = styled.div`
+const ResultDisplay = styled.div`
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 20px;
-  margin: 20px 0;
-  text-align: center;
+  margin-top: 20px;
+  max-height: 400px;
+  overflow-y: auto;
 `;
+
 
 // ==================== Architecture Implementations ====================
 
@@ -261,7 +235,7 @@ class MicroservicesArchitecture {
 
   createHealthCheck() {
     return {
-      check: async (instance) => {
+      check: async () => {
         // Simulate health check
         return { status: 'healthy', latency: Math.random() * 100 };
       }
@@ -414,14 +388,12 @@ class DomainDrivenDesign {
 // ==================== React Component ====================
 
 const ArchitectureShowcase = () => {
-  const navigate = useNavigate();
   const { getRequest } = useApi();
 
   // State management
   const [loading, setLoading] = useState(true);
   const [links, setLinks] = useState([]);
   const [demonstrations, setDemonstrations] = useState({});
-  const [selectedArchitecture, setSelectedArchitecture] = useState(null);
   const [comparison, setComparison] = useState(null);
 
   // Architecture instances
@@ -493,7 +465,7 @@ const ArchitectureShowcase = () => {
       }, {
         process: async (request) => {
           switch (request.method) {
-            case 'getTags':
+            case 'getTags': {
               const allTags = new Set();
               links.forEach(link => {
                 if (link.tags) {
@@ -501,6 +473,7 @@ const ArchitectureShowcase = () => {
                 }
               });
               return { success: true, data: Array.from(allTags) };
+            }
             default:
               throw new Error(`Unknown method: ${request.method}`);
           }
@@ -527,7 +500,7 @@ const ArchitectureShowcase = () => {
       }));
 
       toast.success('Microservices architecture demonstrated!');
-    } catch (error) {
+    } catch {
       toast.error('Microservices demonstration failed');
     }
   };
@@ -575,7 +548,7 @@ const ArchitectureShowcase = () => {
       }));
 
       toast.success('Event-Driven architecture demonstrated!');
-    } catch (error) {
+    } catch {
       toast.error('Event-Driven demonstration failed');
     }
   };
@@ -648,7 +621,7 @@ const ArchitectureShowcase = () => {
       }));
 
       toast.success('SOA architecture demonstrated!');
-    } catch (error) {
+    } catch {
       toast.error('SOA demonstration failed');
     }
   };
@@ -707,7 +680,7 @@ const ArchitectureShowcase = () => {
       }));
 
       toast.success('DDD architecture demonstrated!');
-    } catch (error) {
+    } catch {
       toast.error('DDD demonstration failed');
     }
   };
