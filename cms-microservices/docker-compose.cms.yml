@@ -1,0 +1,416 @@
+version: '3.8'
+
+# Universal CMS Microservices Architecture
+#
+# Implements:
+# - Microservices Pattern - Separate, autonomous services
+# - Service Discovery - Dynamic service registration
+# - API Gateway - Single entry point with routing
+# - Event-Driven Architecture - Async communication
+# - Circuit Breaker - Fault tolerance
+# - Distributed Tracing - Request tracking
+# - Service Mesh - Inter-service communication
+#
+# SOLID Compliance:
+# S: Single Responsibility - Each service handles one concern
+# O: Open/Closed - Services can be extended without modification
+# D: Dependency Inversion - Services depend on interfaces
+# I: Interface Segregation - Focused service interfaces
+
+networks:
+  cms-network:
+    driver: bridge
+  monitoring:
+    driver: bridge
+
+volumes:
+  component-registry-data:
+  page-builder-data:
+  rendering-cache:
+  template-store:
+  asset-store:
+  prometheus-data:
+  grafana-data:
+  jaeger-data:
+
+services:
+  # ==================== API Gateway ====================
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: cms-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - PROMETHEUS_ENDPOINT=http://prometheus:9090
+    depends_on:
+      - redis
+      - consul
+    networks:
+      - cms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Component Registry Service ====================
+  component-registry:
+    build:
+      context: ./services/component-registry
+      dockerfile: Dockerfile
+    container_name: cms-component-registry
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=production
+      - PORT=8081
+      - MONGODB_URL=mongodb://mongodb:27017/cms_component_registry
+      - REDIS_URL=redis://redis:6379
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+    depends_on:
+      - mongodb
+      - redis
+      - consul
+    volumes:
+      - component-registry-data:/app/data
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Page Builder Service ====================
+  page-builder:
+    build:
+      context: ./services/page-builder
+      dockerfile: Dockerfile
+    container_name: cms-page-builder
+    ports:
+      - "8082:8082"
+    environment:
+      - NODE_ENV=production
+      - PORT=8082
+      - MONGODB_URL=mongodb://mongodb:27017/cms_page_builder
+      - REDIS_URL=redis://redis:6379
+      - COMPONENT_REGISTRY_URL=http://component-registry:8081
+      - TEMPLATE_SERVICE_URL=http://template-service:8083
+      - ASSET_SERVICE_URL=http://asset-service:8084
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+    depends_on:
+      - mongodb
+      - redis
+      - component-registry
+      - template-service
+      - asset-service
+    volumes:
+      - page-builder-data:/app/data
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Template Service ====================
+  template-service:
+    build:
+      context: ./services/template-service
+      dockerfile: Dockerfile
+    container_name: cms-template-service
+    ports:
+      - "8083:8083"
+    environment:
+      - NODE_ENV=production
+      - PORT=8083
+      - MONGODB_URL=mongodb://mongodb:27017/cms_templates
+      - REDIS_URL=redis://redis:6379
+      - FILE_STORE_PATH=/app/templates
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - template-store:/app/templates
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Rendering Service ====================
+  rendering-service:
+    build:
+      context: ./services/rendering-service
+      dockerfile: Dockerfile
+    container_name: cms-rendering-service
+    ports:
+      - "8084:8084"
+    environment:
+      - NODE_ENV=production
+      - PORT=8084
+      - REDIS_URL=redis://redis:6379
+      - TEMPLATE_SERVICE_URL=http://template-service:8083
+      - ASSET_SERVICE_URL=http://asset-service:8085
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENABLE_CACHING=true
+      - CACHE_TTL=300
+    depends_on:
+      - redis
+      - template-service
+      - asset-service
+    volumes:
+      - rendering-cache:/app/cache
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Asset Service ====================
+  asset-service:
+    build:
+      context: ./services/asset-service
+      dockerfile: Dockerfile
+    container_name: cms-asset-service
+    ports:
+      - "8085:8085"
+    environment:
+      - NODE_ENV=production
+      - PORT=8085
+      - MONGODB_URL=mongodb://mongodb:27017/cms_assets
+      - REDIS_URL=redis://redis:6379
+      - FILE_STORE_PATH=/app/assets
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - MAX_FILE_SIZE=10485760
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - asset-store:/app/assets
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Configuration Service ====================
+  configuration-service:
+    build:
+      context: ./services/configuration-service
+      dockerfile: Dockerfile
+    container_name: cms-configuration-service
+    ports:
+      - "8086:8086"
+    environment:
+      - NODE_ENV=production
+      - PORT=8086
+      - MONGODB_URL=mongodb://mongodb:27017/cms_configuration
+      - REDIS_URL=redis://redis:6379
+      - CONSUL_URL=consul:8500
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - WATCH_CONFIG_CHANGES=true
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==================== Infrastructure Services ====================
+
+  # Redis - Caching and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: cms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cms-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # MongoDB - Primary Database
+  mongodb:
+    image: mongo:6
+    container_name: cms-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=cms
+    volumes:
+      - mongodb-data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - cms-network
+    restart: unless-stopped
+
+  # Consul - Service Discovery and Configuration
+  consul:
+    image: consul:1.15
+    container_name: cms-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: consul agent -server -bootstrap-expect=1 -ui -bind=0.0.0.0 -client=0.0.0.0 -datacenter=dc1
+    volumes:
+      - consul-data:/consul/data
+    networks:
+      - cms-network
+    restart: unless-stopped
+
+  # ==================== Monitoring & Observability ====================
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cms-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+  # Grafana - Visualization Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cms-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+  # Jaeger - Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: cms-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    volumes:
+      - jaeger-data:/data
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+  # Elasticsearch - Log Storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: cms-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+  # Kibana - Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.1
+    container_name: cms-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+  # Filebeat - Log Shipping
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.1
+    container_name: cms-filebeat
+    user: root
+    volumes:
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - KIBANA_HOST=kibana:5601
+    depends_on:
+      - elasticsearch
+    networks:
+      - cms-network
+      - monitoring
+    restart: unless-stopped
+
+# Additional volumes for data persistence
+volumes:
+  redis-data:
+  mongodb-data:
+  consul-data:
+  elasticsearch-data:

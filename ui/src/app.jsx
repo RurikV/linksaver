@@ -10,7 +10,9 @@ import UnverifiedRoute from "./routes/unverified";
 import VerifyRoute from "./routes/verify";
 import Protected from "./routes/protected";
 import CmsRoute from "./routes/cms";
+import ContentHubEnhanced from "./routes/content-hub-enhanced";
 import ContentHub from "./routes/content-hub";
+import PatternsDemonstration from "./routes/patterns-demonstration";
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -39,7 +41,9 @@ const App = () => {
         <Route path="/verify/:token" element={<VerifyRoute />} />
         <Route element={<Protected />}>
           <Route path="/" element={<RootRoute />} />
-          <Route path="/content-hub" element={<ContentHub />} />
+          <Route path="/content-hub" element={<ContentHubEnhanced />} />
+          <Route path="/content-hub-original" element={<ContentHub />} />
+          <Route path="/patterns-demo" element={<PatternsDemonstration />} />
         </Route>
       </Routes>
     </>

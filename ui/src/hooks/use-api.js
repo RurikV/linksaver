@@ -26,7 +26,7 @@ export const useApi = () => {
     postRequest: async (path, data) => {
       setLoading(true);
       return axios
-        .post(`${apiBase}/${path}`, data, {
+        .post(`${apiBase}${path.startsWith('/') ? path : '/' + path}`, data, {
           headers: defaultHeaders,
           withCredentials: true,
         })
@@ -42,7 +42,7 @@ export const useApi = () => {
     putRequest: async (path, data) => {
       setLoading(true);
       return axios
-        .put(`${apiBase}/${path}`, data, {
+        .put(`${apiBase}${path.startsWith('/') ? path : '/' + path}`, data, {
           headers: defaultHeaders,
           withCredentials: true,
         })
@@ -58,7 +58,7 @@ export const useApi = () => {
     getRequest: async (path) => {
       setLoading(true);
       return axios
-        .get(`${apiBase}/${path}`, {
+        .get(`${apiBase}${path.startsWith('/') ? path : '/' + path}`, {
           headers: defaultHeaders,
           withCredentials: true,
         })
@@ -74,7 +74,7 @@ export const useApi = () => {
     deleteRequest: async (path) => {
       setLoading(true);
       return axios
-        .delete(`${apiBase}/${path}`, {
+        .delete(`${apiBase}${path.startsWith('/') ? path : '/' + path}`, {
           headers: defaultHeaders,
           withCredentials: true,
         })

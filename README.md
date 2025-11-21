@@ -210,6 +210,16 @@ Extension:
 
 This repo includes an experimental, extensible CMS composed of two microservices that render pages from a JSON DSL and a plugin registry.
 
+📖 **For detailed architecture and component system documentation, see [CMS.md](doc/CMS.md)**
+
+🔧 **For extensibility mechanisms and runtime customization, see [EXTENSIBILITY.md](doc/EXTENSIBILITY.md)**
+
+🎯 **For IoC container and dependency injection patterns, see [IOC-DI.md](doc/IOC-DI.md)**
+
+📁 **For actual production code proof and implementation examples, see [IMPLEMENTATION-PROOF.md](doc/IMPLEMENTATION-PROOF.md)**
+
+🎯 **For real design patterns implementation proof (Repository, Observer, Factory, Singleton, etc.), see [DESIGN-PATTERNS-PROOF.md](doc/DESIGN-PATTERNS-PROOF.md)**
+
 - cms-sdk — shared library with IoC container, DSL validators (Ajv), plugin registry, renderers, and middleware utilities.
 - cms-composer — service that loads a page JSON (from Mongo), runs middleware (locale, feature flags, A/B), validates, and returns composed JSON.
 - cms-renderer — service that validates a node tree and renders HTML (or echoes JSON), using a plugin allowlist loaded from Mongo.

@@ -20,24 +20,26 @@ app.use(morgan("dev"));
 
 app.use(
   cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      // Allow the UI URL
+      if (origin === process.env.UI_URL) return callback(null, true);
+
+      // Allow localhost for development
+      if (origin.startsWith('http://localhost:')) return callback(null, true);
+
+      // Allow 127.0.0.1 for development
+      if (origin.startsWith('http://127.0.0.1:')) return callback(null, true);
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "X-Link-Saver"],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   })
 );
-
-// Check if the origin is not the same, not the UI url, or if it doesn't have our custom header
-app.use((req, res, next) => {
-  if (
-    req.method !== "OPTIONS" &&
-    req.headers["origin"] &&
-    req.headers["origin"] !== process.env.UI_URL &&
-    !req.headers["x-link-saver"]
-  ) {
-    return res.status(403).send();
-  }
-  next();
-});
 
 routes(app);
 

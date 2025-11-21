@@ -43,6 +43,7 @@ services:
       - "7777:7777"
     volumes:
       - "./api/src:/usr/app/src"
+      - "./api/package.json:/usr/app/package.json"
     links:
       - mongo
   mongo:
