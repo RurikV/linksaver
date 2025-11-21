@@ -41,6 +41,21 @@ const Header = () => {
           >
             Content Hub
           </Button>
+          <Button
+            onClick={() => navigate("/cms-dashboard")}
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: '#fff',
+              border: 'none',
+              padding: '8px 16px',
+              fontSize: '0.9em',
+              fontWeight: '500',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+            }}
+          >
+            CMS Dashboard
+          </Button>
           <Button onClick={handleLogout}>Logout</Button>
         </div>
       </Content>

@@ -13,6 +13,7 @@ import CmsRoute from "./routes/cms";
 import ContentHubEnhanced from "./routes/content-hub-enhanced";
 import ContentHub from "./routes/content-hub";
 import PatternsDemonstration from "./routes/patterns-demonstration";
+import CmsDashboard from "./routes/cms-dashboard";
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -44,6 +45,7 @@ const App = () => {
           <Route path="/content-hub" element={<ContentHubEnhanced />} />
           <Route path="/content-hub-original" element={<ContentHub />} />
           <Route path="/patterns-demo" element={<PatternsDemonstration />} />
+          <Route path="/cms-dashboard" element={<CmsDashboard />} />
         </Route>
       </Routes>
     </>

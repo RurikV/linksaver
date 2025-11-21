@@ -9,6 +9,7 @@ const collectionsRoutes = require("./collections");
 const adaptersRoutes = require("./adapters");
 const commandsRoutes = require("./commands");
 const strategiesRoutes = require("./strategies");
+const cmsControllerRoutes = require("./cms-controller");
 
 module.exports = (app) => {
   app.use("/", baseRoutes);
@@ -20,6 +21,7 @@ module.exports = (app) => {
   app.use("/adapters", adaptersRoutes);
   app.use("/commands", commandsRoutes);
   app.use("/strategies", strategiesRoutes);
+  app.use("/cms-controller", cmsControllerRoutes);
 
   // 404 fallback if nothing catches above
   app.use(notFound);

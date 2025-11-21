@@ -1,0 +1,151 @@
+/* CMS Dashboard Component Styles */
+
+.link-component {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.link-component:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.link-header h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.link-header h4 a {
+  text-decoration: none;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.link-header h4 a:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.link-url {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.link-description {
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.link-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.tag {
+  background: #f0f0f0;
+  color: #333;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+.link-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.link-actions button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn {
+  background: #28a745;
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #218838;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #c82333;
+}
+
+.container-component {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #f8f9fa;
+}
+
+.container-component.vertical > .container-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.container-component.horizontal > .container-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.container-component.grid > .container-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.cms-page {
+  font-family: 'Open Sans', sans-serif;
+  line-height: 1.6;
+}
+
+.cms-page h1 {
+  color: #333;
+  margin-bottom: 30px;
+  text-align: center;
+  border-bottom: 3px solid #667eea;
+  padding-bottom: 15px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .FeatureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ComponentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .StatsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .link-actions {
+    flex-direction: column;
+  }
+}
