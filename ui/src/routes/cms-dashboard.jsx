@@ -29,7 +29,7 @@ import './cms-dashboard-styles.css';
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f8fafc;
   padding: 20px;
 `;
 
@@ -37,13 +37,14 @@ const DashboardContent = styled.div`
   max-width: 1600px;
   margin: 0 auto;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
   overflow: hidden;
 `;
 
 const DashboardHeader = styled.div`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1e293b;
   color: white;
   padding: 30px;
   text-align: center;
@@ -83,15 +84,15 @@ const FeatureGrid = styled.div`
 
 const FeatureCard = styled.div`
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 25px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    border-color: #64748b;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -146,15 +147,15 @@ const ComponentGrid = styled.div`
 `;
 
 const ComponentCard = styled.div`
-  background: #f8f9fa;
+  background: #f8fafc;
   border-radius: 8px;
   padding: 20px;
-  border: 2px solid #e9ecef;
+  border: 1px solid #e2e8f0;
   position: relative;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: #667eea;
+    border-color: #64748b;
     background: white;
   }
 `;
@@ -166,10 +167,10 @@ const ComponentName = styled.h4`
 `;
 
 const ComponentType = styled.span`
-  background: #667eea;
+  background: #475569;
   color: white;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 4px;
   font-size: 0.75em;
   font-weight: 600;
 `;
@@ -226,7 +227,7 @@ const StatsGrid = styled.div`
 const StatCard = styled.div`
   text-align: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1e293b;
   color: white;
   border-radius: 8px;
 `;
@@ -307,8 +308,8 @@ class LinkComponent extends CmsComponent {
         ${this.link.description ? `<div class="link-description">${this.link.description}</div>` : ''}
         ${tags ? `<div class="link-tags">${tags}</div>` : ''}
         <div class="link-actions">
-          <button class="edit-btn" onclick="window.cms.editLink('${this.link.linkId}')">✏️ Edit</button>
-          <button class="delete-btn" onclick="window.cms.deleteLink('${this.link.linkId}')">🗑️ Delete</button>
+          <button class="edit-btn" onclick="window.cms.editLink('${this.link.linkId}')">Edit</button>
+          <button class="delete-btn" onclick="window.cms.deleteLink('${this.link.linkId}')">Delete</button>
         </div>
       </div>
     `;
@@ -504,9 +505,9 @@ const CmsDashboard = () => {
     builderRef.current = builder;
 
     setCmsFramework({
-      registry: '✅ Active',
-      pipeline: '✅ Active',
-      builder: '✅ Active',
+      registry: 'Active',
+      pipeline: 'Active',
+      builder: 'Active',
       plugins: 0,
       components: 0
     });
@@ -647,8 +648,8 @@ const CmsDashboard = () => {
                     ${link.description ? `<div class="link-description">${link.description}</div>` : ''}
                     ${link.tags && link.tags.length > 0 ? `<div class="link-tags">${link.tags.map(tag => `<span class="tag">${tag.title || tag.name}</span>`).join(' ')}</div>` : ''}
                     <div class="link-actions">
-                      <button class="edit-btn" onclick="window.cms.editLink('${link.linkId}')">✏️ Edit</button>
-                      <button class="delete-btn" onclick="window.cms.deleteLink('${link.linkId}')">🗑️ Delete</button>
+                      <button class="edit-btn" onclick="window.cms.editLink('${link.linkId}')">Edit</button>
+                      <button class="delete-btn" onclick="window.cms.deleteLink('${link.linkId}')">Delete</button>
                     </div>
                   </div>`;
                 }
@@ -668,7 +669,7 @@ const CmsDashboard = () => {
   const getHeaderStyles = (config) => {
     const styles = [];
     if (config.centerText) styles.push('text-align: center');
-    if (config.borderBottom) styles.push('border-bottom: 3px solid #667eea; padding-bottom: 15px');
+    if (config.borderBottom) styles.push('border-bottom: 3px solid #1e293b; padding-bottom: 15px');
     return styles.join('; ');
   };
 
@@ -737,7 +738,7 @@ const CmsDashboard = () => {
   const renderFeatureCards = () => {
     const features = [
       {
-        title: '🏗️ Component Registry',
+        title: 'Component Registry',
         description: 'Dynamic component registration and creation system with plugin support',
         actions: [
           { label: 'View Components', onClick: demonstrateComponentRegistry },
@@ -746,7 +747,7 @@ const CmsDashboard = () => {
         status: 'active'
       },
       {
-        title: '🧩 Composite Pattern',
+        title: 'Composite Pattern',
         description: 'Hierarchical component structure with parent-child relationships',
         actions: [
           { label: 'Build Tree', onClick: createPageWithLinks },
@@ -755,7 +756,7 @@ const CmsDashboard = () => {
         status: 'active'
       },
       {
-        title: '⚙️ Pipeline Middleware',
+        title: 'Pipeline Middleware',
         description: 'Request processing pipeline with configurable middleware',
         actions: [
           { label: 'Execute Pipeline', onClick: demonstratePipeline },
@@ -764,7 +765,7 @@ const CmsDashboard = () => {
         status: 'active'
       },
       {
-        title: '🔧 Page Builder',
+        title: 'Page Builder',
         description: 'Fluent interface for building pages with components',
         actions: [
           { label: 'Create Page', onClick: createPageWithLinks },
@@ -773,7 +774,7 @@ const CmsDashboard = () => {
         status: 'active'
       },
       {
-        title: '🔌 Plugin System',
+        title: 'Plugin System',
         description: 'Extensible architecture with runtime plugin loading',
         actions: [
           { label: 'Load Plugin', onClick: () => toast.info('Plugin loading demo') },
@@ -782,7 +783,7 @@ const CmsDashboard = () => {
         status: 'active'
       },
       {
-        title: '🎯 IoC Container',
+        title: 'IoC Container',
         description: 'Dependency injection container with lifetime management',
         actions: [
           { label: 'View Container', onClick: () => toast.info('IoC container demo') },
@@ -807,7 +808,7 @@ const CmsDashboard = () => {
               key={actionIndex}
               onClick={action.onClick}
               style={{
-                background: '#667eea',
+                background: '#475569',
                 color: 'white',
                 border: 'none',
                 padding: '8px 16px',
@@ -867,7 +868,7 @@ const CmsDashboard = () => {
       <Header />
       <DashboardContent>
         <DashboardHeader>
-          <DashboardTitle>🚀 Universal CMS Dashboard</DashboardTitle>
+          <DashboardTitle>Universal CMS Dashboard</DashboardTitle>
           <DashboardSubtitle>
             Advanced Content Management System with SOLID Principles & Design Patterns
           </DashboardSubtitle>
@@ -875,7 +876,7 @@ const CmsDashboard = () => {
 
         <DashboardBody>
           {/* CMS Framework Status */}
-          <SectionTitle>📊 System Status</SectionTitle>
+          <SectionTitle>System Status</SectionTitle>
           {cmsFramework && (
             <StatsGrid>
               <StatCard>
@@ -898,33 +899,33 @@ const CmsDashboard = () => {
           )}
 
           {/* Pipeline Status */}
-          <SectionTitle>⚙️ Pipeline Status</SectionTitle>
+          <SectionTitle>Pipeline Status</SectionTitle>
           <PipelineStatus>
             <PipelineStep $active={pipelineStatus === 'authenticating'}>
-              🔐 Authenticating
+              Authenticating
             </PipelineStep>
             <PipelineStep $active={pipelineStatus === 'validating'}>
-              ✅ Validating
+              Validating
             </PipelineStep>
             <PipelineStep $active={pipelineStatus === 'processing'}>
-              ⚙️ Processing
+              Processing
             </PipelineStep>
             <PipelineStep $active={pipelineStatus === 'rendering'}>
-              🎨 Rendering
+              Rendering
             </PipelineStep>
             <PipelineStep $active={pipelineStatus === 'idle'}>
-              ✅ Complete
+              Complete
             </PipelineStep>
           </PipelineStatus>
 
           {/* Core Features */}
-          <SectionTitle>🎯 Core CMS Features</SectionTitle>
+          <SectionTitle>Core CMS Features</SectionTitle>
           <FeatureGrid>
             {renderFeatureCards()}
           </FeatureGrid>
 
           {/* Component Registry */}
-          <SectionTitle>🧩 Available Components</SectionTitle>
+          <SectionTitle>Available Components</SectionTitle>
           <ComponentGrid>
             {renderComponents()}
           </ComponentGrid>
@@ -932,7 +933,7 @@ const CmsDashboard = () => {
           {/* Page Preview */}
           {currentPage && (
             <>
-              <SectionTitle>📄 Generated Page Preview</SectionTitle>
+              <SectionTitle>Generated Page Preview</SectionTitle>
               <PagePreview>
                 <h3>{currentPage.title}</h3>
                 <div dangerouslySetInnerHTML={{ __html: currentPage.html }} />
@@ -941,12 +942,12 @@ const CmsDashboard = () => {
           )}
 
           {/* Active Plugins */}
-          <SectionTitle>🔌 Active Plugins</SectionTitle>
+          <SectionTitle>Active Plugins</SectionTitle>
           <FeatureGrid>
             {activePlugins.map((plugin, index) => (
               <FeatureCard key={index}>
                 <FeatureTitle>
-                  🔌 {plugin.name}
+                  {plugin.name}
                   <StatusBadge $status={plugin.status}>
                     {plugin.status}
                   </StatusBadge>
@@ -958,7 +959,7 @@ const CmsDashboard = () => {
                   <Button
                     onClick={() => toast.info(`Plugin ${plugin.name} details`)}
                     style={{
-                      background: '#667eea',
+                      background: '#475569',
                       color: 'white',
                       border: 'none',
                       padding: '8px 16px',

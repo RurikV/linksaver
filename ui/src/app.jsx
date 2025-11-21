@@ -14,6 +14,10 @@ import ContentHubEnhanced from "./routes/content-hub-enhanced";
 import ContentHub from "./routes/content-hub";
 import PatternsDemonstration from "./routes/patterns-demonstration";
 import CmsDashboard from "./routes/cms-dashboard";
+import PluginMarketplace from "./routes/plugin-marketplace";
+import PatternLab from "./routes/pattern-lab";
+import ArchitectureShowcase from "./routes/architecture-showcase";
+import DevelopmentTools from "./routes/development-tools";
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -46,6 +50,10 @@ const App = () => {
           <Route path="/content-hub-original" element={<ContentHub />} />
           <Route path="/patterns-demo" element={<PatternsDemonstration />} />
           <Route path="/cms-dashboard" element={<CmsDashboard />} />
+          <Route path="/plugin-marketplace" element={<PluginMarketplace />} />
+          <Route path="/pattern-lab" element={<PatternLab />} />
+          <Route path="/architecture-showcase" element={<ArchitectureShowcase />} />
+          <Route path="/development-tools" element={<DevelopmentTools />} />
         </Route>
       </Routes>
     </>
