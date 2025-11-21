@@ -1,0 +1,27 @@
+/**
+ * Test to verify CMS core module imports are working
+ */
+
+describe('CMS Core Module Imports', () => {
+  test('should be able to import IoCContainer', async () => {
+    // Try importing the module
+    try {
+      const { IoCContainer } = require('../cms-core/dist/container/IoCContainer');
+      expect(IoCContainer).toBeDefined();
+      expect(typeof IoCContainer).toBe('function');
+    } catch (error) {
+      // If it fails, provide a more informative error
+      console.error('Import failed:', error.message);
+      // Check if file exists
+      const fs = require('fs');
+      const path = require('path');
+      const containerPath = path.resolve(__dirname, '../../../cms-core/container/IoCContainer.ts');
+      if (fs.existsSync(containerPath)) {
+        console.log('IoCContainer.ts exists at:', containerPath);
+      } else {
+        console.log('IoCContainer.ts NOT found at:', containerPath);
+      }
+      throw error;
+    }
+  });
+});

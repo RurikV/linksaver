@@ -14,6 +14,7 @@
     "cms:test:coverage": "npm --prefix cms-sdk run test:coverage && npm --prefix cms-composer run test:coverage && npm --prefix cms-renderer run test:coverage && npm --prefix ui run test:coverage"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "typescript": "^5.9.3"
   }
 }
